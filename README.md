@@ -5,7 +5,7 @@ Jeu multijoueur 3D en temps réel (Solo vs Bot IA, 2 Joueurs Local, et Multijoue
 ## 🚀 Déployer sur Vercel depuis GitHub
 
 1. Crée un nouveau dépôt (repository) sur [GitHub](https://github.com/new) nommé `echo-paradox-3d`.
-2. Envoie les fichiers de ce dossier (`index.html`, `vercel.json`, `package.json`, `README.md`) sur ton dépôt GitHub :
+2. Envoie les fichiers de ce dossier (`index.html`, `css/`, `js/`, `vercel.json`, `package.json`, `README.md`) sur ton dépôt GitHub :
    ```bash
    git init
    git add .
