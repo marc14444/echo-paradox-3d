@@ -1,5 +1,5 @@
-// ECHO-PARADOX 3D — Service Worker PWA
-const CACHE_NAME = 'echo-paradox-v2.1';
+// ECHO-PARADOX 3D — Service Worker PWA (Rebuilt & Versioned)
+const CACHE_NAME = 'echo-paradox-v2.3-mobile-responsive';
 const CORE_ASSETS = [
   './',
   './index.html',

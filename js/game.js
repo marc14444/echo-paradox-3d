@@ -3072,10 +3072,21 @@ function initPWA() {
       navigator.serviceWorker.register('./sw.js')
         .then((reg) => {
           console.log('[PWA] Service Worker actif:', reg.scope);
+          // Check for service worker updates immediately
+          reg.update().catch(() => {});
         })
         .catch((err) => {
           console.warn('[PWA] Service Worker registration skipped:', err);
         });
+
+      // Reload page once when new service worker takes control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
     });
   }
 
