@@ -197,17 +197,17 @@
   </div>
 
   <!-- MAIN MENU OVERLAY (CLEAN, MODERN & ACCESSIBLE) -->
-  <main id="menu-overlay" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md">
-    <div class="hud-glass w-full max-w-3xl rounded-3xl p-5 sm:p-7 border border-cyan-500/40 shadow-2xl my-auto">
+  <main id="menu-overlay" class="fixed inset-0 z-30 flex items-start sm:items-center justify-center p-2.5 sm:p-6 overflow-y-auto overflow-x-hidden bg-slate-950/80 backdrop-blur-md safe-top safe-bottom">
+    <div class="hud-glass w-full max-w-3xl rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 border border-cyan-500/40 shadow-2xl my-auto box-border">
       
       <!-- Top Branding & Profile Pill -->
-      <div class="flex items-center justify-between border-b border-slate-800/80 pb-4">
-        <div>
-          <div class="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-300 border border-cyan-400/30 mb-1">
+      <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5 sm:pb-3.5 gap-2">
+        <div class="min-w-0">
+          <div class="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-cyan-300 border border-cyan-400/30 mb-0.5">
             <span class="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
             <span>DUEL 3D TEMPOREL</span>
           </div>
-          <h1 class="font-cyber text-2xl sm:text-3xl font-black tracking-tight text-white neon-text-cyan">
+          <h1 class="font-cyber text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-white neon-text-cyan leading-tight whitespace-nowrap truncate">
             ECHO-PARADOX <span class="text-cyan-400">3D</span>
           </h1>
           <p class="text-xs text-slate-300 hidden sm:block">
@@ -216,159 +216,158 @@
         </div>
 
         <!-- Compact Player Stats Badge -->
-        <div class="hud-glass rounded-2xl px-3.5 py-2 flex items-center gap-3 border border-slate-700/80">
+        <div class="hud-glass rounded-xl sm:rounded-2xl px-2.5 py-1 sm:px-3.5 sm:py-2 flex items-center gap-2 sm:gap-3 border border-slate-700/80 shrink-0">
           <div class="text-center">
-            <div class="text-[9px] uppercase tracking-wider text-slate-400">Victoires</div>
-            <div id="stat-wins" class="font-cyber text-sm sm:text-base font-black text-cyan-400">0</div>
+            <div class="text-[8px] sm:text-[9px] uppercase tracking-wider text-slate-400">Victoires</div>
+            <div id="stat-wins" class="font-cyber text-xs sm:text-base font-black text-cyan-400">0</div>
           </div>
-          <div class="h-6 w-px bg-slate-700"></div>
+          <div class="h-5 sm:h-6 w-px bg-slate-700"></div>
           <div class="text-center">
-            <div class="text-[9px] uppercase tracking-wider text-slate-400">Clones</div>
-            <div id="stat-echoes" class="font-cyber text-sm sm:text-base font-black text-amber-400">0</div>
+            <div class="text-[8px] sm:text-[9px] uppercase tracking-wider text-slate-400">Clones</div>
+            <div id="stat-echoes" class="font-cyber text-xs sm:text-base font-black text-amber-400">0</div>
           </div>
-          <div class="h-6 w-px bg-slate-700"></div>
-          <div class="text-center">
+          <div class="h-5 sm:h-6 w-px bg-slate-700 hidden sm:block"></div>
+          <div class="text-center hidden sm:block">
             <div class="text-[9px] uppercase tracking-wider text-slate-400">Rang</div>
             <div id="stat-rank" class="font-cyber text-xs font-bold text-emerald-400">BRONZE I</div>
           </div>
         </div>
       </div>
 
-      <!-- Navigation Tabs (Sleek, Organized, Zero Visual Clutter) -->
-      <nav class="flex items-center gap-1.5 sm:gap-2 mt-4 p-1 rounded-2xl bg-slate-900/90 border border-slate-800">
-        <button data-tab="play" class="menu-tab-btn active flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-cyber font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-300 transition shadow-sm">
-          <span>🎮</span> <span>JOUER</span>
+      <!-- Navigation Tabs (Grid 4 Columns, Responsive, Zero Horizontal Overflow) -->
+      <nav class="grid grid-cols-4 gap-1 sm:gap-2 mt-3 p-1 rounded-xl sm:rounded-2xl bg-slate-900/90 border border-slate-800 w-full">
+        <button data-tab="play" class="menu-tab-btn active flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1 text-[10px] sm:text-xs font-cyber font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-300 transition shadow-sm w-full">
+          <span class="text-xs sm:text-sm">🎮</span> <span class="tracking-tight truncate">JOUER</span>
         </button>
-        <button data-tab="online" class="menu-tab-btn flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-cyber font-bold border border-transparent text-slate-400 hover:text-slate-200 transition">
-          <span>🌐</span> <span>EN LIGNE</span>
+        <button data-tab="online" class="menu-tab-btn flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1 text-[10px] sm:text-xs font-cyber font-bold border border-transparent text-slate-400 hover:text-slate-200 transition w-full">
+          <span class="text-xs sm:text-sm">🌐</span> <span class="tracking-tight truncate">EN LIGNE</span>
         </button>
-        <button data-tab="hangar" class="menu-tab-btn flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-cyber font-bold border border-transparent text-slate-400 hover:text-slate-200 transition">
-          <span>🎨</span> <span>HANGAR</span>
+        <button data-tab="hangar" class="menu-tab-btn flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1 text-[10px] sm:text-xs font-cyber font-bold border border-transparent text-slate-400 hover:text-slate-200 transition w-full">
+          <span class="text-xs sm:text-sm">🎨</span> <span class="tracking-tight truncate">HANGAR</span>
         </button>
-        <button data-tab="rules" class="menu-tab-btn flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-cyber font-bold border border-transparent text-slate-400 hover:text-slate-200 transition">
-          <span>📖</span> <span>RÈGLES</span>
+        <button data-tab="rules" class="menu-tab-btn flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 rounded-lg sm:rounded-xl py-1.5 sm:py-2 px-1 text-[10px] sm:text-xs font-cyber font-bold border border-transparent text-slate-400 hover:text-slate-200 transition w-full">
+          <span class="text-xs sm:text-sm">📖</span> <span class="tracking-tight truncate">RÈGLES</span>
         </button>
       </nav>
 
       <!-- TAB 1: 🎮 JOUER (Default, Crystal Clear, One Big Play CTA) -->
-      <div id="tab-panel-play" class="menu-tab-panel flex flex-col gap-3.5 mt-4">
+      <div id="tab-panel-play" class="menu-tab-panel flex flex-col gap-2.5 sm:gap-3.5 mt-3">
         <!-- Main Hero Card: Solo vs Bot IA -->
-        <div class="hud-glass rounded-2xl p-5 border-2 border-cyan-400/60 shadow-xl bg-gradient-to-br from-cyan-950/30 via-slate-900/80 to-slate-900/95">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-400/40">
-                <span>⚡</span> <span>MODE PRINCIPAL RECOMMANDÉ</span>
-              </div>
-              <h2 class="font-cyber text-lg sm:text-xl font-black text-white mt-1.5">
-                Duel 1v1 contre l'IA
-              </h2>
-              <p class="text-xs text-slate-300 mt-1 max-w-lg">
-                Vise et tire automatiquement ! Ton vaisseau tire sur l'ennemi. Toutes les 10s, tes <strong>anciens tirs</strong> créent un clone bleu allié qui combat avec toi !
-              </p>
-            </div>
+        <div class="hud-glass rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border-2 border-cyan-400/60 shadow-xl bg-gradient-to-br from-cyan-950/30 via-slate-900/80 to-slate-900/95">
+          <div class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-emerald-300 border border-emerald-400/40 mb-1">
+            <span>⚡</span> <span>MODE PRINCIPAL RECOMMANDÉ</span>
+          </div>
+          <h2 class="font-cyber text-base sm:text-xl font-black text-white">
+            Duel 1v1 contre l'IA
+          </h2>
+          <p class="text-[11px] sm:text-xs text-slate-300 mt-0.5 leading-snug">
+            Vise et tire automatiquement ! Toutes les 10s, tes anciens tirs créent un <strong>clone bleu allié</strong>.
+          </p>
 
-            <!-- Bot Difficulty Selector -->
-            <div class="shrink-0 flex sm:flex-col items-center gap-1 sm:items-end mt-2 sm:mt-0">
-              <span class="text-[10px] font-mono text-slate-400 uppercase">Difficulté :</span>
-              <div class="flex items-center gap-1">
-                <button data-diff="easy" class="bot-diff-btn rounded-lg px-2.5 py-1 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200">
-                  Initié
-                </button>
-                <button data-diff="medium" class="bot-diff-btn rounded-lg px-2.5 py-1 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300 hover:border-cyan-400">
-                  Tacticien
-                </button>
-                <button data-diff="hard" class="bot-diff-btn rounded-lg px-2.5 py-1 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300 hover:border-rose-400">
-                  Paradoxe
-                </button>
-              </div>
+          <!-- Bot Difficulty Selector: Full-Width 3-Column Grid -->
+          <div class="mt-2.5 pt-2 border-t border-slate-800/80">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[9px] sm:text-[10px] font-mono text-slate-400 uppercase">Difficulté IA :</span>
+              <span class="text-[9px] sm:text-[10px] text-cyan-300 font-semibold">Tir auto activé</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 w-full">
+              <button data-diff="easy" class="bot-diff-btn rounded-xl py-1.5 px-1 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200 text-center">
+                Initié
+              </button>
+              <button data-diff="medium" class="bot-diff-btn rounded-xl py-1.5 px-1 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300 hover:border-cyan-400 text-center">
+                Tacticien
+              </button>
+              <button data-diff="hard" class="bot-diff-btn rounded-xl py-1.5 px-1 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300 hover:border-rose-400 text-center">
+                Paradoxe
+              </button>
             </div>
           </div>
 
           <!-- The Big Play Button -->
-          <button id="btn-start-bot" class="neon-btn-cyan w-full rounded-2xl py-3.5 sm:py-4 mt-4 font-cyber text-sm sm:text-base font-black text-white shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition">
-            <span class="text-lg">▶</span>
+          <button id="btn-start-bot" class="neon-btn-cyan w-full rounded-xl sm:rounded-2xl py-3 sm:py-3.5 mt-3 font-cyber text-xs sm:text-sm font-black text-white shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition">
+            <span class="text-base sm:text-lg">▶</span>
             <span>LANCER LA PARTIE IMMÉDIATEMENT</span>
           </button>
         </div>
 
         <!-- 2 Secondary Mode Cards (Clean Grid) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <!-- Dojo Challenges -->
-          <div class="hud-glass rounded-2xl p-4 border border-emerald-500/40 flex flex-col justify-between hover:border-emerald-400 transition bg-slate-900/60">
+          <div class="hud-glass rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-emerald-500/40 flex flex-col justify-between hover:border-emerald-400 transition bg-slate-900/60">
             <div>
-              <div class="flex items-center gap-2">
-                <span class="text-xl">🎯</span>
-                <h3 class="font-cyber text-sm font-bold text-white">Dojo & Défis Solo</h3>
+              <div class="flex items-center gap-1.5">
+                <span class="text-base sm:text-xl">🎯</span>
+                <h3 class="font-cyber text-xs sm:text-sm font-bold text-white">Dojo & Défis Solo</h3>
               </div>
-              <p class="text-xs text-slate-300 mt-1">
-                Entraîne-toi sur 3 épreuves chrono sans pression (Stand de tir, Esquive de tourelles, Smash).
+              <p class="text-[11px] text-slate-300 mt-0.5">
+                3 épreuves chrono solo (Stand de tir, Tourelles, Smash).
               </p>
             </div>
-            <button id="btn-open-challenges" class="neon-btn-cyan w-full rounded-xl py-2.5 mt-3 font-cyber text-xs font-bold text-white shadow">
+            <button id="btn-open-challenges" class="neon-btn-cyan w-full rounded-xl py-2 mt-2 font-cyber text-xs font-bold text-white shadow">
               ⚡ Sélectionner un Défi
             </button>
           </div>
 
           <!-- 2 Players Local -->
-          <div class="hud-glass-pink rounded-2xl p-4 border border-rose-500/40 flex flex-col justify-between hover:border-rose-400 transition bg-slate-900/60">
+          <div class="hud-glass-pink rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-rose-500/40 flex flex-col justify-between hover:border-rose-400 transition bg-slate-900/60">
             <div>
-              <div class="flex items-center gap-2">
-                <span class="text-xl">⚔️</span>
-                <h3 class="font-cyber text-sm font-bold text-white">Duel 2 Joueurs (Local)</h3>
+              <div class="flex items-center gap-1.5">
+                <span class="text-base sm:text-xl">⚔️</span>
+                <h3 class="font-cyber text-xs sm:text-sm font-bold text-white">Duel 2 Joueurs (Local)</h3>
               </div>
-              <p class="text-xs text-slate-300 mt-1">
-                Deux vaisseaux sur le même clavier : J1 (ZQSD + Espace) contre J2 (Flèches + Entrée).
+              <p class="text-[11px] text-slate-300 mt-0.5">
+                Deux vaisseaux sur le même clavier (ZQSD vs Flèches).
               </p>
             </div>
-            <button id="btn-start-local" class="neon-btn-pink w-full rounded-xl py-2.5 mt-3 font-cyber text-xs font-bold text-white shadow">
+            <button id="btn-start-local" class="neon-btn-pink w-full rounded-xl py-2 mt-2 font-cyber text-xs font-bold text-white shadow">
               🔥 Lancer Duel 2 Joueurs
             </button>
           </div>
         </div>
 
         <!-- Quick 3-Step Mini Strip -->
-        <div class="rounded-xl bg-slate-900/80 px-3 py-2 border border-slate-800 text-[11px] text-slate-300 flex flex-wrap items-center justify-between gap-2">
-          <span>🕹️ <strong>1.</strong> Déplace-toi (Clavier, Souris ou Joystick)</span>
-          <span>⚡ <strong>2.</strong> Vise et tire automatiquement</span>
-          <span>⏪ <strong>3.</strong> Clones temporels alliés toutes les 10s</span>
+        <div class="rounded-xl bg-slate-900/80 px-2.5 py-1.5 border border-slate-800 text-[10px] sm:text-[11px] text-slate-300 flex flex-wrap items-center justify-between gap-1">
+          <span>🕹️ <strong>1.</strong> Déplace-toi</span>
+          <span>⚡ <strong>2.</strong> Tir automatique</span>
+          <span>⏪ <strong>3.</strong> Clones à 10s</span>
         </div>
       </div>
 
       <!-- TAB 2: 🌐 EN LIGNE (Multiplayer P2P Worldwide) -->
-      <div id="tab-panel-online" class="menu-tab-panel hidden flex-col gap-3 mt-4">
+      <div id="tab-panel-online" class="menu-tab-panel hidden flex-col gap-2.5 sm:gap-3 mt-3">
         <!-- Host room card -->
-        <div class="hud-glass rounded-2xl p-4 border border-amber-500/40 bg-slate-900/70">
+        <div class="hud-glass rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-amber-500/40 bg-slate-900/70">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-xl">🌍</span>
-              <h3 class="font-cyber text-sm font-bold text-amber-300">Inviter un Ami en Ligne</h3>
+            <div class="flex items-center gap-1.5">
+              <span class="text-lg sm:text-xl">🌍</span>
+              <h3 class="font-cyber text-xs sm:text-sm font-bold text-amber-300">Inviter un Ami en Ligne</h3>
             </div>
-            <span class="text-[10px] font-mono text-emerald-400">P2P WebRTC 60 FPS</span>
+            <span class="text-[9px] sm:text-[10px] font-mono text-emerald-400">P2P WebRTC 60 FPS</span>
           </div>
-          <p class="text-xs text-slate-300 mt-1">
+          <p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">
             Partage ton code ou ton lien direct à un ami sur Discord, WhatsApp ou navigateur.
           </p>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-            <div class="flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 border border-slate-700">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5">
+            <div class="flex items-center justify-between rounded-xl bg-slate-900 px-3 py-1.5 sm:py-2 border border-slate-700">
               <span class="text-xs text-slate-400">Ton Code :</span>
               <span id="my-room-code" class="font-cyber text-xs font-bold text-amber-300">GÉNÉRATION...</span>
               <button id="btn-copy-code" class="text-xs font-bold text-cyan-400 hover:underline">Copier</button>
             </div>
-            <button id="btn-copy-direct-link" class="rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 py-2 px-3 text-xs font-bold text-cyan-300 transition flex items-center justify-center gap-1.5">
+            <button id="btn-copy-direct-link" class="rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 py-1.5 sm:py-2 px-3 text-xs font-bold text-cyan-300 transition flex items-center justify-center gap-1.5">
               🔗 Copier Lien Direct (1 Clic)
             </button>
           </div>
-          <div id="online-status-msg" class="text-[11px] text-slate-400 mt-2 truncate">
+          <div id="online-status-msg" class="text-[10px] sm:text-[11px] text-slate-400 mt-1.5 truncate">
             Prêt à héberger ou rejoindre un duel mondial.
           </div>
         </div>
 
         <!-- Join room card -->
-        <div class="hud-glass rounded-2xl p-4 border border-slate-700 bg-slate-900/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="hud-glass rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-slate-700 bg-slate-900/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div>
             <h4 class="font-cyber text-xs font-bold text-white">Rejoindre un salon ami :</h4>
-            <p class="text-[11px] text-slate-400">Entre le code reçu par ton adversaire.</p>
+            <p class="text-[10px] sm:text-[11px] text-slate-400">Entre le code reçu par ton adversaire.</p>
           </div>
           <div class="flex items-center gap-2 w-full sm:w-auto">
             <input id="input-join-code" type="text" placeholder="Code (ex: ECHO-4821)" class="w-full sm:w-44 rounded-xl bg-slate-950 px-3 py-2 text-xs text-white border border-slate-700 focus:border-amber-400 focus:outline-none uppercase font-mono" />
@@ -379,56 +378,56 @@
         </div>
 
         <!-- Quick Matchmaking Simulator -->
-        <button id="btn-sim-online" class="hud-glass rounded-2xl p-3 border border-amber-400/40 hover:border-amber-300 text-center font-cyber text-xs font-bold text-amber-300 transition flex items-center justify-center gap-2">
+        <button id="btn-sim-online" class="hud-glass rounded-xl sm:rounded-2xl p-2.5 sm:p-3 border border-amber-400/40 hover:border-amber-300 text-center font-cyber text-xs font-bold text-amber-300 transition flex items-center justify-center gap-2">
           <span>🌐</span> <span>TESTER LE MATCHMAKING RAPIDE</span>
         </button>
       </div>
 
       <!-- TAB 3: 🎨 HANGAR & ARÈNES (Customization) -->
-      <div id="tab-panel-hangar" class="menu-tab-panel hidden flex-col gap-3.5 mt-4">
+      <div id="tab-panel-hangar" class="menu-tab-panel hidden flex-col gap-2.5 sm:gap-3.5 mt-3">
         <!-- Starfighter skin choice -->
-        <div class="hud-glass rounded-2xl p-4 border border-cyan-500/30 bg-slate-900/70">
+        <div class="hud-glass rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-cyan-500/30 bg-slate-900/70">
           <div class="flex items-center justify-between mb-2">
             <h3 class="font-cyber text-xs font-bold text-cyan-300 flex items-center gap-1.5">
               <span>🚀</span> <span>CHASSEUR STELLAIRE & COULEUR LASER</span>
             </h3>
-            <span class="text-[10px] text-slate-400">Sauvegarde automatique</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-400">Sauvegardé auto</span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <button data-skin="cyan" data-color="0x06b6d4" class="skin-choice-btn active flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200">
-              <span class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span> Cyan Cyber
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2">
+            <button data-skin="cyan" data-color="0x06b6d4" class="skin-choice-btn active flex items-center justify-center gap-1.5 rounded-xl py-2 px-1.5 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200">
+              <span class="h-2 w-2 rounded-full bg-cyan-400"></span> Cyan Cyber
             </button>
-            <button data-skin="purple" data-color="0xa855f7" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-bold border border-slate-700 bg-slate-800/80 text-purple-300 hover:border-purple-400">
-              <span class="h-2.5 w-2.5 rounded-full bg-purple-400"></span> Synthwave
+            <button data-skin="purple" data-color="0xa855f7" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-1.5 text-xs font-bold border border-slate-700 bg-slate-800/80 text-purple-300 hover:border-purple-400">
+              <span class="h-2 w-2 rounded-full bg-purple-400"></span> Synthwave
             </button>
-            <button data-skin="green" data-color="0x10b981" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-bold border border-slate-700 bg-slate-800/80 text-emerald-300 hover:border-emerald-400">
-              <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span> Matrix
+            <button data-skin="green" data-color="0x10b981" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-1.5 text-xs font-bold border border-slate-700 bg-slate-800/80 text-emerald-300 hover:border-emerald-400">
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Matrix
             </button>
-            <button data-skin="gold" data-color="0xf59e0b" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-bold border border-slate-700 bg-slate-800/80 text-amber-300 hover:border-amber-400">
-              <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span> Solaire
+            <button data-skin="gold" data-color="0xf59e0b" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-1.5 text-xs font-bold border border-slate-700 bg-slate-800/80 text-amber-300 hover:border-amber-400">
+              <span class="h-2 w-2 rounded-full bg-amber-400"></span> Solaire
             </button>
-            <button data-skin="white" data-color="0xe2e8f0" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-bold border border-slate-700 bg-slate-800/80 text-slate-200 hover:border-white">
-              <span class="h-2.5 w-2.5 rounded-full bg-white"></span> Fantôme
+            <button data-skin="white" data-color="0xe2e8f0" class="skin-choice-btn flex items-center justify-center gap-1.5 rounded-xl py-2 px-1.5 text-xs font-bold border border-slate-700 bg-slate-800/80 text-slate-200 hover:border-white col-span-2 sm:col-span-1">
+              <span class="h-2 w-2 rounded-full bg-white"></span> Fantôme
             </button>
           </div>
         </div>
 
         <!-- Arena choice -->
-        <div class="hud-glass rounded-2xl p-4 border border-cyan-500/30 bg-slate-900/70">
+        <div class="hud-glass rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-cyan-500/30 bg-slate-900/70">
           <div class="flex items-center justify-between mb-2">
             <h3 class="font-cyber text-xs font-bold text-amber-300 flex items-center gap-1.5">
               <span>🏟️</span> <span>ENVIRONNEMENT DE L'ARÈNE 3D</span>
             </h3>
-            <span class="text-[10px] text-slate-400">Effets météo & reflets</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-400">Météo & reflets</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button data-arena="cyber" class="arena-choice-btn active rounded-xl py-2.5 px-3 font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200 flex items-center justify-center gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2">
+            <button data-arena="cyber" class="arena-choice-btn active rounded-xl py-2 px-3 font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200 flex items-center justify-center gap-2 text-xs">
               <span>🟦</span> <span>Cyber Néon</span>
             </button>
-            <button data-arena="magma" class="arena-choice-btn rounded-xl py-2.5 px-3 font-bold border border-slate-700 bg-slate-800/80 text-orange-300 hover:border-orange-400 flex items-center justify-center gap-2">
+            <button data-arena="magma" class="arena-choice-btn rounded-xl py-2 px-3 font-bold border border-slate-700 bg-slate-800/80 text-orange-300 hover:border-orange-400 flex items-center justify-center gap-2 text-xs">
               <span>🌋</span> <span>Noyau Magma</span>
             </button>
-            <button data-arena="void" class="arena-choice-btn rounded-xl py-2.5 px-3 font-bold border border-slate-700 bg-slate-800/80 text-purple-300 hover:border-purple-400 flex items-center justify-center gap-2">
+            <button data-arena="void" class="arena-choice-btn rounded-xl py-2 px-3 font-bold border border-slate-700 bg-slate-800/80 text-purple-300 hover:border-purple-400 flex items-center justify-center gap-2 text-xs">
               <span>🌌</span> <span>Void Nébuleuse</span>
             </button>
           </div>
@@ -436,26 +435,26 @@
       </div>
 
       <!-- TAB 4: 📖 RÈGLES & CONSEILS (Simple, Visual, Educational) -->
-      <div id="tab-panel-rules" class="menu-tab-panel hidden flex-col gap-3 mt-4">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div class="rounded-2xl bg-slate-900/90 p-3.5 border border-cyan-500/40 shadow">
-            <div class="flex items-center gap-2 font-cyber font-bold text-cyan-300 mb-1">
+      <div id="tab-panel-rules" class="menu-tab-panel hidden flex-col gap-2.5 sm:gap-3 mt-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs">
+          <div class="rounded-xl sm:rounded-2xl bg-slate-900/90 p-3 sm:p-3.5 border border-cyan-500/40 shadow">
+            <div class="flex items-center gap-1.5 font-cyber font-bold text-cyan-300 mb-1 text-xs">
               <span>🕹️</span> <span>1. Bouger & Tirer</span>
             </div>
             <p class="text-slate-300 text-[11px] leading-relaxed">
               Déplace ton vaisseau avec les <strong>Flèches</strong>, <strong>ZQSD</strong>, ou en touchant l'écran. Ton vaisseau vise et tire tout seul sur l'ennemi rouge !
             </p>
           </div>
-          <div class="rounded-2xl bg-slate-900/90 p-3.5 border border-amber-500/40 shadow">
-            <div class="flex items-center gap-2 font-cyber font-bold text-amber-300 mb-1">
+          <div class="rounded-xl sm:rounded-2xl bg-slate-900/90 p-3 sm:p-3.5 border border-amber-500/40 shadow">
+            <div class="flex items-center gap-1.5 font-cyber font-bold text-amber-300 mb-1 text-xs">
               <span>⏱️</span> <span>2. Clones Temporels</span>
             </div>
             <p class="text-slate-300 text-[11px] leading-relaxed">
               Toutes les <strong>10 secondes</strong>, tes tirs passés donnent vie à un <strong>clone fantôme allié</strong>. Plus tu tires, plus tes clones t'aident !
             </p>
           </div>
-          <div class="rounded-2xl bg-slate-900/90 p-3.5 border border-emerald-500/40 shadow">
-            <div class="flex items-center gap-2 font-cyber font-bold text-emerald-300 mb-1">
+          <div class="rounded-xl sm:rounded-2xl bg-slate-900/90 p-3 sm:p-3.5 border border-emerald-500/40 shadow">
+            <div class="flex items-center gap-1.5 font-cyber font-bold text-emerald-300 mb-1 text-xs">
               <span>💎</span> <span>3. Bonus & Victoire</span>
             </div>
             <p class="text-slate-300 text-[11px] leading-relaxed">
@@ -464,10 +463,10 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between rounded-2xl bg-slate-900/60 p-3 border border-slate-800 text-xs">
-          <span class="text-slate-300">Tu veux consulter tes trophées débloqués ?</span>
-          <button id="btn-achievements-from-rules" class="neon-btn-cyan rounded-xl px-4 py-1.5 font-cyber text-xs font-bold text-white">
-            🏆 Voir mes Trophées
+        <div class="flex items-center justify-between rounded-xl sm:rounded-2xl bg-slate-900/60 p-2.5 sm:p-3 border border-slate-800 text-xs">
+          <span class="text-slate-300 text-[11px]">Consulter tes succès débloqués ?</span>
+          <button id="btn-achievements-from-rules" class="neon-btn-cyan rounded-xl px-3.5 py-1.5 font-cyber text-[11px] font-bold text-white">
+            🏆 Voir Trophées
           </button>
         </div>
       </div>

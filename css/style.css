@@ -85,6 +85,8 @@ body, html {
 /* Modern Menu Tab Navigation */
 .menu-tab-btn {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 0;
+  user-select: none;
 }
 .menu-tab-btn.active {
   border-color: #22d3ee !important;
@@ -95,10 +97,26 @@ body, html {
 }
 .menu-tab-panel {
   animation: fadeInTab 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 0;
+  width: 100%;
 }
 @keyframes fadeInTab {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Strict Mobile Containment & Anti-Overflow */
+#menu-overlay {
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+#menu-overlay > div {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.bot-diff-btn {
+  min-width: 0;
+  white-space: nowrap;
 }
 .scanline-overlay {
   pointer-events: none;
