@@ -1301,50 +1301,98 @@ const joystickZone = document.getElementById('virtual-joystick-zone');
 const joystickKnob = document.getElementById('joystick-knob');
 let joystickActive = false;
 let joystickCenter = { x: 0, y: 0 };
+let activeJoystickPointerId = null;
+let currentControlMode = 'joystick';
+
+function setControlMode(mode) {
+  currentControlMode = mode;
+  const dpad = document.getElementById('dpad-container');
+  const label = document.getElementById('ctrl-mode-label');
+  const maxR = 46;
+
+  if (mode === 'joystick') {
+    if (joystickZone) joystickZone.classList.remove('hidden');
+    if (dpad) dpad.classList.add('hidden');
+    if (label) label.textContent = 'Mode: Joystick';
+  } else {
+    if (joystickZone) joystickZone.classList.add('hidden');
+    if (dpad) dpad.classList.remove('hidden');
+    if (label) label.textContent = 'Mode: Croix D-Pad';
+    touchJoystickVec.x = 0;
+    touchJoystickVec.z = 0;
+    if (joystickKnob) joystickKnob.style.transform = 'translate(0px, 0px)';
+  }
+  try { localStorage.setItem('echo_control_mode', mode); } catch (e) {}
+}
 
 function initVirtualJoystick() {
   if (!joystickZone || !joystickKnob) return;
-  // Show joystick if on touch device
-  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-    joystickZone.classList.remove('hidden');
-  }
 
-  const handleTouchStart = (e) => {
-    const touch = e.targetTouches[0];
-    const rect = joystickZone.getBoundingClientRect();
-    joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    joystickActive = true;
-    handleTouchMove(e);
-  };
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
+  let savedMode = 'joystick';
+  try { savedMode = localStorage.getItem('echo_control_mode') || (isTouchDevice ? 'joystick' : 'dpad'); } catch (e) {}
+  setControlMode(savedMode);
 
-  const handleTouchMove = (e) => {
-    if (!joystickActive) return;
-    const touch = e.targetTouches[0];
-    const dx = touch.clientX - joystickCenter.x;
-    const dy = touch.clientY - joystickCenter.y;
+  const updateKnobFromCoords = (clientX, clientY) => {
+    const dx = clientX - joystickCenter.x;
+    const dy = clientY - joystickCenter.y;
     const dist = Math.hypot(dx, dy);
-    const maxR = 42;
+    const maxR = 46;
     const clampedDist = Math.min(dist, maxR);
     const angle = Math.atan2(dy, dx);
     const kx = Math.cos(angle) * clampedDist;
     const ky = Math.sin(angle) * clampedDist;
 
     joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+    // Normalize vector [-1, 1]
     touchJoystickVec.x = kx / maxR;
     touchJoystickVec.z = ky / maxR;
   };
 
-  const handleTouchEnd = () => {
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    activeJoystickPointerId = e.pointerId;
+    try { joystickZone.setPointerCapture(e.pointerId); } catch (err) {}
+
+    const rect = joystickZone.getBoundingClientRect();
+    joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    joystickActive = true;
+    updateKnobFromCoords(e.clientX, e.clientY);
+    triggerHaptic(15);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!joystickActive || e.pointerId !== activeJoystickPointerId) return;
+    e.preventDefault();
+    updateKnobFromCoords(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = (e) => {
+    if (e.pointerId !== activeJoystickPointerId) return;
     joystickActive = false;
-    joystickKnob.style.transform = `translate(0px, 0px)`;
+    activeJoystickPointerId = null;
+    try { joystickZone.releasePointerCapture(e.pointerId); } catch (err) {}
+    joystickKnob.style.transform = 'translate(0px, 0px)';
     touchJoystickVec.x = 0;
     touchJoystickVec.z = 0;
   };
 
-  joystickZone.addEventListener('touchstart', handleTouchStart, { passive: false });
-  joystickZone.addEventListener('touchmove', handleTouchMove, { passive: false });
-  joystickZone.addEventListener('touchend', handleTouchEnd);
-  joystickZone.addEventListener('touchcancel', handleTouchEnd);
+  joystickZone.addEventListener('pointerdown', handlePointerDown);
+  joystickZone.addEventListener('pointermove', handlePointerMove);
+  joystickZone.addEventListener('pointerup', handlePointerUp);
+  joystickZone.addEventListener('pointercancel', handlePointerUp);
+
+  // Toggle control switcher
+  const btnToggleCtrl = document.getElementById('btn-toggle-ctrl-style');
+  if (btnToggleCtrl) {
+    btnToggleCtrl.addEventListener('click', () => {
+      const newMode = currentControlMode === 'joystick' ? 'dpad' : 'joystick';
+      setControlMode(newMode);
+      showToast(newMode === 'joystick' ? '🕹️ Mode Joystick Tactile activé' : '🔲 Mode Croix Directionnelle activé');
+      window.focus();
+    });
+  }
 }
 
 // Fallback touch D-Pad listeners
@@ -1358,50 +1406,72 @@ document.querySelectorAll('.touch-move-btn').forEach((btn) => {
     if (dir === 'down') touchJoystickVec.z = 1;
     if (dir === 'left') touchJoystickVec.x = -1;
     if (dir === 'right') touchJoystickVec.x = 1;
+    triggerHaptic(12);
   };
   const endMove = (ev) => {
     ev.preventDefault();
     touchJoystickVec.x = 0;
     touchJoystickVec.z = 0;
   };
-  btn.addEventListener('touchstart', startMove, { passive: false });
-  btn.addEventListener('touchend', endMove, { passive: false });
-  btn.addEventListener('mousedown', startMove);
-  btn.addEventListener('mouseup', endMove);
+  btn.addEventListener('pointerdown', startMove);
+  btn.addEventListener('pointerup', endMove);
+  btn.addEventListener('pointercancel', endMove);
   btn.addEventListener('mouseleave', endMove);
 });
 
-// Action Buttons
-document.getElementById('btn-action-shoot').addEventListener('click', () => {
-  window.focus();
-  if (gameState.running && !gameState.paused) triggerShoot(p1, false);
-});
+// Low-Latency Responsive Action Buttons (Zero 300ms Delay on Touch)
+const btnShoot = document.getElementById('btn-action-shoot');
+const btnDash = document.getElementById('btn-action-dash');
 
-document.getElementById('btn-action-dash').addEventListener('click', () => {
+const handleInstantShoot = (e) => {
+  if (e) e.preventDefault();
   window.focus();
-  if (gameState.running && !gameState.paused) triggerDash(p1);
-});
+  if (gameState.running && !gameState.paused) {
+    triggerShoot(p1, false);
+    triggerHaptic(25);
+  }
+};
+
+const handleInstantDash = (e) => {
+  if (e) e.preventDefault();
+  window.focus();
+  if (gameState.running && !gameState.paused) {
+    triggerDash(p1);
+    triggerHaptic(40);
+  }
+};
+
+if (btnShoot) {
+  btnShoot.addEventListener('pointerdown', handleInstantShoot);
+  btnShoot.addEventListener('click', (e) => e.preventDefault());
+}
+
+if (btnDash) {
+  btnDash.addEventListener('pointerdown', handleInstantDash);
+  btnDash.addEventListener('click', (e) => e.preventDefault());
+}
 
 document.getElementById('btn-autofire-toggle').addEventListener('click', () => {
   gameState.autoFire = !gameState.autoFire;
   const btn = document.getElementById('btn-autofire-toggle');
   if (gameState.autoFire) {
-    btn.textContent = '🤖 TIR AUTO : ACTIVÉ (Vise et tire tout seul)';
-    btn.className = 'rounded-xl bg-emerald-500/25 border border-emerald-400 px-3 py-1 text-xs font-bold text-emerald-200 hover:bg-emerald-500/35 transition';
+    btn.textContent = '🤖 TIR AUTO : ACTIVÉ';
+    btn.className = 'rounded-xl bg-emerald-500/25 border border-emerald-400 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-500/35 transition active:scale-95 shadow-md';
   } else {
-    btn.textContent = '🎯 TIR MANUEL (Appuie sur ESPACE pour tirer)';
-    btn.className = 'rounded-xl bg-slate-800/90 border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:border-cyan-400 transition';
+    btn.textContent = '🎯 TIR MANUEL (Bouton Tir ou Espace)';
+    btn.className = 'rounded-xl bg-slate-800/90 border border-slate-600 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-cyan-400 transition active:scale-95 shadow-md';
   }
   window.focus();
 });
 
 function toggleAimMode() {
   gameState.aimMode = gameState.aimMode === 'auto' ? 'manual' : 'auto';
-  const label = document.getElementById('aim-mode-label');
-  if (label) {
-    label.textContent = gameState.aimMode === 'auto' ? 'Visée: Auto' : 'Visée: Libre (Souris)';
-  }
-  showToast(gameState.aimMode === 'auto' ? '🎯 Visée Automatique (Verrouillée sur l\'ennemi)' : '🎯 Visée Libre (Dirige les tirs avec la souris/curseur !)');
+  const labelHeader = document.getElementById('aim-mode-label');
+  const labelSettings = document.getElementById('aim-settings-label');
+  const text = gameState.aimMode === 'auto' ? 'Visée: Auto' : 'Visée: Libre';
+  if (labelHeader) labelHeader.textContent = text;
+  if (labelSettings) labelSettings.textContent = text;
+  showToast(gameState.aimMode === 'auto' ? '🎯 Visée Automatique (Verrouillée)' : '🎯 Visée Libre (Dirige au toucher/souris !)');
 }
 
 document.getElementById('btn-aim-mode').addEventListener('click', toggleAimMode);
@@ -2731,13 +2801,18 @@ document.getElementById('btn-home-menu').addEventListener('click', () => {
   document.getElementById('marker-core').classList.add('hidden');
 });
 
-document.getElementById('btn-camera-view').addEventListener('click', () => {
+function cycleCameraMode() {
   gameState.cameraMode = (gameState.cameraMode + 1) % 3;
   const labels = ['Caméra: Immersive', 'Caméra: Tactique', 'Caméra: Hologramme AR'];
-  document.getElementById('camera-label').textContent = labels[gameState.cameraMode];
+  const lblHeader = document.getElementById('camera-label');
+  const lblSettings = document.getElementById('camera-settings-label');
+  if (lblHeader) lblHeader.textContent = labels[gameState.cameraMode];
+  if (lblSettings) lblSettings.textContent = labels[gameState.cameraMode];
   showToast(labels[gameState.cameraMode]);
   window.focus();
-});
+}
+
+document.getElementById('btn-camera-view').addEventListener('click', cycleCameraMode);
 
 document.getElementById('btn-sound-toggle').addEventListener('click', () => {
   soundFX.enabled = !soundFX.enabled;
@@ -2889,6 +2964,42 @@ if (toggleHapticsEl) {
   });
 }
 
+// Settings Modal Mobile Quick Shortcuts
+const btnCameraSettings = document.getElementById('btn-camera-settings');
+if (btnCameraSettings) btnCameraSettings.addEventListener('click', cycleCameraMode);
+
+const btnAimSettings = document.getElementById('btn-aim-settings');
+if (btnAimSettings) btnAimSettings.addEventListener('click', toggleAimMode);
+
+const btnCtrlSettings = document.getElementById('btn-ctrl-mode-settings');
+if (btnCtrlSettings) {
+  btnCtrlSettings.addEventListener('click', () => {
+    const newMode = currentControlMode === 'joystick' ? 'dpad' : 'joystick';
+    setControlMode(newMode);
+    showToast(newMode === 'joystick' ? '🕹️ Mode Joystick Tactile activé' : '🔲 Mode Croix Directionnelle activé');
+  });
+}
+
+const btnFsSettings = document.getElementById('btn-fullscreen-settings');
+if (btnFsSettings) btnFsSettings.addEventListener('click', toggleFullscreen);
+
+const btnRulesSettings = document.getElementById('btn-rules-settings');
+if (btnRulesSettings) {
+  btnRulesSettings.addEventListener('click', () => {
+    closeSettings();
+    document.getElementById('btn-rules-help').click();
+  });
+}
+
+const btnAchSettings = document.getElementById('btn-achievements-settings');
+if (btnAchSettings) {
+  btnAchSettings.addEventListener('click', () => {
+    closeSettings();
+    const btnOpen = document.getElementById('btn-achievements-modal');
+    if (btnOpen) btnOpen.click();
+  });
+}
+
 
 // Achievements Modal Listeners
 const achModal = document.getElementById('achievements-modal');
@@ -2939,12 +3050,119 @@ document.querySelectorAll('.btn-start-challenge').forEach((btn) => {
   });
 });
 
+// PWA Service Worker & Install Prompt Management
+let deferredPwaPrompt = null;
+
+function initPWA() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => {
+          console.log('[PWA] Service Worker actif:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[PWA] Service Worker registration skipped:', err);
+        });
+    });
+  }
+
+  const btnInstallHeader = document.getElementById('btn-install-pwa');
+  const btnInstallSettings = document.getElementById('btn-install-pwa-settings');
+  const pwaModal = document.getElementById('pwa-modal');
+  const btnClosePwaModal = document.getElementById('btn-close-pwa-modal');
+  const btnOkPwaModal = document.getElementById('btn-ok-pwa-modal');
+  const btnTriggerPrompt = document.getElementById('btn-trigger-pwa-prompt');
+  const pwaNativeBlock = document.getElementById('pwa-native-prompt');
+  const pwaIosBlock = document.getElementById('pwa-ios-instructions');
+
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+  if (isStandalone) {
+    if (btnInstallHeader) btnInstallHeader.classList.add('hidden');
+    if (btnInstallSettings) {
+      btnInstallSettings.textContent = '✅ Jeu déjà installé en PWA';
+      btnInstallSettings.classList.add('opacity-75');
+    }
+    return;
+  }
+
+  if (isIos && !isStandalone) {
+    if (btnInstallHeader) btnInstallHeader.classList.remove('hidden');
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    if (btnInstallHeader) btnInstallHeader.classList.remove('hidden');
+    if (btnInstallSettings) btnInstallSettings.textContent = '📲 Installer l\'App sur mon Appareil (1 Clic)';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPwaPrompt = null;
+    if (btnInstallHeader) btnInstallHeader.classList.add('hidden');
+    if (pwaModal) {
+      pwaModal.classList.add('hidden');
+      pwaModal.classList.remove('flex');
+    }
+    showToast('🎉 Echo-Paradox 3D installé avec succès ! Retrouve-le sur ton écran d\'accueil !');
+  });
+
+  const openPwaModal = () => {
+    if (deferredPwaPrompt) {
+      deferredPwaPrompt.prompt();
+      deferredPwaPrompt.userChoice.then((choice) => {
+        if (choice && choice.outcome === 'accepted') {
+          showToast('Installation en cours...');
+        }
+        deferredPwaPrompt = null;
+      });
+      return;
+    }
+
+    if (pwaModal) {
+      if (isIos) {
+        if (pwaNativeBlock) pwaNativeBlock.classList.add('hidden');
+        if (pwaIosBlock) pwaIosBlock.classList.remove('hidden');
+      } else {
+        if (pwaNativeBlock) pwaNativeBlock.classList.remove('hidden');
+        if (pwaIosBlock) pwaIosBlock.classList.add('hidden');
+      }
+      pwaModal.classList.remove('hidden');
+      pwaModal.classList.add('flex');
+    }
+  };
+
+  if (btnInstallHeader) btnInstallHeader.addEventListener('click', openPwaModal);
+  if (btnInstallSettings) btnInstallSettings.addEventListener('click', openPwaModal);
+
+  if (btnTriggerPrompt) {
+    btnTriggerPrompt.addEventListener('click', () => {
+      if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+      } else {
+        showToast('Appuyez sur le menu du navigateur (⋮) puis "Ajouter à l\'écran d\'accueil"');
+      }
+    });
+  }
+
+  const closePwa = () => {
+    if (pwaModal) {
+      pwaModal.classList.add('hidden');
+      pwaModal.classList.remove('flex');
+    }
+  };
+  if (btnClosePwaModal) btnClosePwaModal.addEventListener('click', closePwa);
+  if (btnOkPwaModal) btnOkPwaModal.addEventListener('click', closePwa);
+}
+
 // Boot on load
 window.onload = () => {
   PlayerStats.load();
   loadAchievements();
   initPeerMultiplayer();
   initVirtualJoystick();
+  initPWA();
 
   // Load saved arena theme
   try {
@@ -2974,6 +3192,19 @@ window.onload = () => {
     if (savedHap !== null && toggleHapticsEl) {
       toggleHapticsEl.checked = savedHap === '1';
       hapticsEnabled = savedHap === '1';
+    }
+  } catch (e) {}
+
+  // PWA shortcut / URL params
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    if (mode === 'dojo') {
+      const btnOpen = document.getElementById('btn-open-challenges');
+      if (btnOpen) btnOpen.click();
+    } else if (mode === 'arena') {
+      const btnVsBot = document.getElementById('btn-start-bot');
+      if (btnVsBot) btnVsBot.click();
     }
   } catch (e) {}
 
