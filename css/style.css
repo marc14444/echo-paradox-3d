@@ -81,6 +81,25 @@ body, html {
   box-shadow: 0 0 28px rgba(244, 63, 94, 0.5);
   transform: translateY(-1px);
 }
+
+/* Modern Menu Tab Navigation */
+.menu-tab-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-tab-btn.active {
+  border-color: #22d3ee !important;
+  background: rgba(6, 182, 212, 0.24) !important;
+  color: #67e8f9 !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+  transform: translateY(-1px);
+}
+.menu-tab-panel {
+  animation: fadeInTab 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .scanline-overlay {
   pointer-events: none;
   position: fixed;

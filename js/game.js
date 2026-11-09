@@ -1663,9 +1663,22 @@ function showBanner(text, icon = '⚡') {
   }, 2600);
 }
 
+let coachTimeout = null;
 function setCoachText(htmlText) {
+  const bar = document.getElementById('coach-bar');
   const el = document.getElementById('coach-step-text');
   if (el) el.innerHTML = htmlText;
+  if (bar) {
+    bar.classList.remove('hidden', 'opacity-0');
+    bar.classList.add('opacity-100');
+    if (coachTimeout) clearTimeout(coachTimeout);
+    coachTimeout = setTimeout(() => {
+      bar.classList.add('transition-opacity', 'duration-500', 'opacity-0');
+      setTimeout(() => {
+        if (bar.classList.contains('opacity-0')) bar.classList.add('hidden');
+      }, 500);
+    }, 5500);
+  }
 }
 
 function triggerTimeRewindCycle() {
@@ -3156,6 +3169,41 @@ function initPWA() {
   if (btnOkPwaModal) btnOkPwaModal.addEventListener('click', closePwa);
 }
 
+function initMenuTabs() {
+  const tabs = document.querySelectorAll('.menu-tab-btn');
+  const panels = document.querySelectorAll('.menu-tab-panel');
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach((t) => {
+        t.classList.remove('active', 'border-cyan-400', 'bg-cyan-500/25', 'text-cyan-300');
+        t.classList.add('border-transparent', 'text-slate-400');
+      });
+      tab.classList.add('active', 'border-cyan-400', 'bg-cyan-500/25', 'text-cyan-300');
+      tab.classList.remove('border-transparent', 'text-slate-400');
+
+      panels.forEach((p) => {
+        if (p.id === `tab-panel-${target}`) {
+          p.classList.remove('hidden');
+          p.classList.add('flex');
+        } else {
+          p.classList.add('hidden');
+          p.classList.remove('flex');
+        }
+      });
+      triggerHaptic(15);
+    });
+  });
+
+  const btnAchFromRules = document.getElementById('btn-achievements-from-rules');
+  if (btnAchFromRules) {
+    btnAchFromRules.addEventListener('click', () => {
+      const btnOpen = document.getElementById('btn-achievements-modal');
+      if (btnOpen) btnOpen.click();
+    });
+  }
+}
+
 // Boot on load
 window.onload = () => {
   PlayerStats.load();
@@ -3163,6 +3211,7 @@ window.onload = () => {
   initPeerMultiplayer();
   initVirtualJoystick();
   initPWA();
+  initMenuTabs();
 
   // Load saved arena theme
   try {
