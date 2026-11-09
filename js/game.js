@@ -346,6 +346,94 @@ class CyberAudio {
   }
 }
 
+
+// =========================================================================
+// ACHIEVEMENTS & TROPHIES ENGINE
+// =========================================================================
+const ACHIEVEMENTS_DEF = [
+  { id: 'first_win', title: 'Premier Sang', icon: '🥇', desc: 'Remporter ton premier duel temporel' },
+  { id: 'emp_deflect', title: 'Miroir Fatal', icon: '🛡️', desc: 'Renvoyer un laser avec le bouclier EMP' },
+  { id: 'dash_crush_3', title: 'Briseur de Boucle', icon: '💥', desc: 'Détruire un clone au Dash en plein vol' },
+  { id: 'accuracy_elite', title: 'Tireur d\'Élite', icon: '🎯', desc: 'Finir un duel avec plus de 75% de précision' },
+  { id: 'survive_cycle_3', title: 'Chrono-Maître', icon: '⏱️', desc: 'Survivre jusqu\'au Cycle 3 ou plus' },
+  { id: 'powerup_collector', title: 'Pillard Temporel', icon: '💎', desc: 'Ramasser un bonus au centre de l\'arène' }
+];
+
+let unlockedAchievements = new Set();
+
+function loadAchievements() {
+  try {
+    const raw = localStorage.getItem('echo_achievements_v2');
+    if (raw) {
+      unlockedAchievements = new Set(JSON.parse(raw));
+    }
+  } catch (e) {}
+}
+
+function unlockAchievement(id) {
+  if (unlockedAchievements.has(id)) return;
+  const ach = ACHIEVEMENTS_DEF.find((a) => a.id === id);
+  if (!ach) return;
+
+  unlockedAchievements.add(id);
+  try {
+    localStorage.setItem('echo_achievements_v2', JSON.stringify(Array.from(unlockedAchievements)));
+  } catch (e) {}
+
+  soundFX.playPowerup();
+  triggerHaptics([80, 50, 100]);
+
+  // Spawn visual golden achievement banner
+  const containerEl = document.getElementById('achievement-popup-container');
+  if (containerEl) {
+    const popup = document.createElement('div');
+    popup.className = 'achievement-popup hud-glass rounded-2xl px-5 py-2.5 border-2 border-amber-400/80 shadow-2xl flex items-center gap-3 bg-gradient-to-r from-amber-950/70 via-slate-900/90 to-slate-950';
+    popup.innerHTML = `
+      <div class="h-10 w-10 rounded-xl bg-amber-400/20 border border-amber-300 flex items-center justify-center text-xl shrink-0">
+        ${ach.icon}
+      </div>
+      <div>
+        <div class="text-[10px] font-bold tracking-wider text-amber-300 font-cyber">🏆 SUCCÈS DÉBLOQUÉ !</div>
+        <div class="font-cyber text-xs font-black text-white">${ach.title}</div>
+        <div class="text-[11px] text-slate-300">${ach.desc}</div>
+      </div>
+    `;
+    containerEl.appendChild(popup);
+    setTimeout(() => popup.remove(), 3500);
+  }
+}
+
+function renderAchievementsModal() {
+  const listEl = document.getElementById('achievements-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  ACHIEVEMENTS_DEF.forEach((ach) => {
+    const isUnlocked = unlockedAchievements.has(ach.id);
+    const card = document.createElement('div');
+    card.className = `rounded-2xl p-3.5 border ${
+      isUnlocked
+        ? 'border-amber-400/60 bg-amber-950/25 hud-glass'
+        : 'border-slate-800 bg-slate-900/60 opacity-60'
+    } flex items-center gap-3`;
+    card.innerHTML = `
+      <div class="h-11 w-11 rounded-xl ${
+        isUnlocked ? 'bg-amber-400/20 border border-amber-400' : 'bg-slate-800'
+      } flex items-center justify-center text-2xl shrink-0">
+        ${isUnlocked ? ach.icon : '🔒'}
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between">
+          <h4 class="font-cyber text-xs font-bold ${isUnlocked ? 'text-amber-300' : 'text-slate-400'}">${ach.title}</h4>
+          <span class="text-[10px] font-mono ${isUnlocked ? 'text-emerald-400 font-bold' : 'text-slate-500'}">${isUnlocked ? 'DÉBLOQUÉ' : 'VERROUILLÉ'}</span>
+        </div>
+        <p class="text-[11px] text-slate-300 mt-0.5 truncate">${ach.desc}</p>
+      </div>
+    `;
+    listEl.appendChild(card);
+  });
+}
+
 const soundFX = new CyberAudio();
 
 // =========================================================================
@@ -505,6 +593,90 @@ const sharedParticleGeo = new THREE.BoxGeometry(0.24, 0.24, 0.24);
 const sharedShockwaveGeo = new THREE.RingGeometry(0.3, 0.55, 32);
 sharedShockwaveGeo.rotateX(-Math.PI / 2);
 const sharedThrusterGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+
+
+// =========================================================================
+// MULTI-ARENA THEMES (Cyber, Magma, Void)
+// =========================================================================
+const ARENA_THEMES = {
+  cyber: {
+    name: 'Cyber Néon',
+    baseColor: 0x091326,
+    grid1: 0x0284c7,
+    grid2: 0x1e293b,
+    border: 0x22d3ee,
+    ring1: 0x38bdf8,
+    ring2: 0xf43f5e,
+    fog: 0x030712,
+    ambient: 0x38bdf8
+  },
+  magma: {
+    name: 'Noyau Magma',
+    baseColor: 0x1a0505,
+    grid1: 0xea580c,
+    grid2: 0x431407,
+    border: 0xf97316,
+    ring1: 0xfbbf24,
+    ring2: 0xef4444,
+    fog: 0x100202,
+    ambient: 0xf97316
+  },
+  void: {
+    name: 'Void Nébuleuse',
+    baseColor: 0x0c0418,
+    grid1: 0x9333ea,
+    grid2: 0x3b0764,
+    border: 0xa855f7,
+    ring1: 0x10b981,
+    ring2: 0x3b82f6,
+    fog: 0x06020c,
+    ambient: 0xa855f7
+  }
+};
+
+let currentArenaTheme = 'cyber';
+
+function applyArenaTheme(themeId) {
+  if (!ARENA_THEMES[themeId]) themeId = 'cyber';
+  currentArenaTheme = themeId;
+  const th = ARENA_THEMES[themeId];
+
+  baseMat.color.setHex(th.baseColor);
+  borderMat.color.setHex(th.border);
+  orbitalRing1.material.color.setHex(th.ring1);
+  orbitalRing2.material.color.setHex(th.ring2);
+  ambientLight.color.setHex(th.ambient);
+  scene.fog.color.setHex(th.fog);
+  renderer.setClearColor(th.fog);
+
+  // Update polar grid
+  arenaGroup.remove(polarGrid);
+  const newGrid = new THREE.PolarGridHelper(ARENA_RADIUS - 0.3, 16, 8, 64, th.grid1, th.grid2);
+  newGrid.position.y = 0.03;
+  arenaGroup.add(newGrid);
+
+  // Update buttons
+  document.querySelectorAll('.arena-choice-btn').forEach((btn) => {
+    if (btn.getAttribute('data-arena') === themeId) {
+      btn.classList.add('active');
+      btn.style.borderColor = '#ffffff';
+    } else {
+      btn.classList.remove('active');
+      btn.style.borderColor = '';
+    }
+  });
+
+  try { localStorage.setItem('echo_arena_theme_v2', themeId); } catch (e) {}
+}
+
+document.querySelectorAll('.arena-choice-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const aId = btn.getAttribute('data-arena');
+    applyArenaTheme(aId);
+    soundFX.playPowerup();
+    showToast('Arène 3D changée : ' + ARENA_THEMES[aId].name);
+  });
+});
 
 // Arena Constants
 const ARENA_RADIUS = 19;
@@ -741,6 +913,231 @@ function createCyberFighterMesh(colorHex, isGhost = false, hasAimLaser = false) 
 
   group.userData = { hull, shield, shieldMat, laserLine };
   return group;
+}
+
+
+// =========================================================================
+// TACTICAL MINI-RADAR & CINEMATIC KILLCAM CONTROLLER
+// =========================================================================
+const radarCanvas = document.getElementById('radar-canvas');
+const radarCtx = radarCanvas ? radarCanvas.getContext('2d') : null;
+let radarSweepAngle = 0;
+
+function renderTacticalRadar() {
+  if (!radarCtx || !gameState.running) return;
+  const w = 84;
+  const h = 84;
+  const cx = 42;
+  const cy = 42;
+  const rMax = 36;
+
+  radarCtx.clearRect(0, 0, w, h);
+
+  // Radar circular background
+  radarCtx.fillStyle = 'rgba(3, 10, 24, 0.88)';
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, rMax, 0, Math.PI * 2);
+  radarCtx.fill();
+
+  // Range rings
+  radarCtx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+  radarCtx.lineWidth = 1;
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, rMax * 0.5, 0, Math.PI * 2);
+  radarCtx.stroke();
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, rMax, 0, Math.PI * 2);
+  radarCtx.stroke();
+
+  // Crosshairs
+  radarCtx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+  radarCtx.beginPath();
+  radarCtx.moveTo(cx - rMax, cy);
+  radarCtx.lineTo(cx + rMax, cy);
+  radarCtx.moveTo(cx, cy - rMax);
+  radarCtx.lineTo(cx, cy + rMax);
+  radarCtx.stroke();
+
+  // Radar sweep beam
+  radarSweepAngle += 0.055;
+  const sweepX = cx + Math.cos(radarSweepAngle) * rMax;
+  const sweepY = cy + Math.sin(radarSweepAngle) * rMax;
+  radarCtx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
+  radarCtx.beginPath();
+  radarCtx.moveTo(cx, cy);
+  radarCtx.lineTo(sweepX, sweepY);
+  radarCtx.stroke();
+
+  const toRadar = (wx, wz) => ({
+    x: cx + (wx / ARENA_RADIUS) * rMax,
+    y: cy + (wz / ARENA_RADIUS) * rMax
+  });
+
+  // Obstacles
+  obstacles.forEach((obs) => {
+    const pt = toRadar(obs.x, obs.z);
+    radarCtx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+    radarCtx.beginPath();
+    radarCtx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+    radarCtx.fill();
+  });
+
+  // Powerup
+  if (powerupState && powerupState.active) {
+    const pt = toRadar(0, 0);
+    radarCtx.fillStyle = '#facc15';
+    radarCtx.beginPath();
+    radarCtx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+    radarCtx.fill();
+  }
+
+  // Clones
+  activeEchoClones.forEach((c) => {
+    const pt = toRadar(c.mesh.position.x, c.mesh.position.z);
+    radarCtx.fillStyle = c.team === 1 ? 'rgba(56, 189, 248, 0.65)' : 'rgba(244, 63, 94, 0.65)';
+    radarCtx.beginPath();
+    radarCtx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+    radarCtx.fill();
+  });
+
+  // P2
+  const p2Pt = toRadar(p2.x, p2.z);
+  radarCtx.fillStyle = '#f43f5e';
+  radarCtx.beginPath();
+  radarCtx.arc(p2Pt.x, p2Pt.y, 3.5, 0, Math.PI * 2);
+  radarCtx.fill();
+
+  // P1
+  const p1Pt = toRadar(p1.x, p1.z);
+  radarCtx.fillStyle = '#22d3ee';
+  radarCtx.beginPath();
+  radarCtx.arc(p1Pt.x, p1Pt.y, 4, 0, Math.PI * 2);
+  radarCtx.fill();
+
+  // P1 Heading line
+  radarCtx.strokeStyle = '#67e8f9';
+  radarCtx.lineWidth = 1.5;
+  radarCtx.beginPath();
+  radarCtx.moveTo(p1Pt.x, p1Pt.y);
+  radarCtx.lineTo(p1Pt.x + Math.cos(p1.angle) * 6, p1Pt.y + Math.sin(p1.angle) * 6);
+  radarCtx.stroke();
+}
+
+// Killcam State
+let killcamActive = false;
+let killcamTarget = null;
+let killcamAngle = 0;
+
+function triggerCinematicKillcam(target, winnerTeam) {
+  killcamActive = true;
+  killcamTarget = target;
+  killcamAngle = target.angle;
+  gameState.slowMoFactor = 0.08;
+
+  const overlay = document.getElementById('killcam-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('killcam-flash');
+    setTimeout(() => overlay.classList.add('hidden'), 1600);
+  }
+
+  spawnExplosion(target.x, 1.2, target.z, target.color, 36);
+  spawnShockwave(target.x, target.z, 0xfacc15, 8.5);
+  soundFX.playCloneDestroy();
+  soundFX.playVictory();
+
+  setTimeout(() => {
+    killcamActive = false;
+    gameState.slowMoFactor = 1.0;
+    endMatch(winnerTeam);
+  }, 1450);
+}
+
+// =========================================================================
+// SOLO CHALLENGES & TRAINING DOJO CONTROLLER
+// =========================================================================
+const soloChallengeState = {
+  active: false,
+  type: null,
+  timer: 0,
+  targetCount: 0,
+  maxTargets: 6,
+  targets: []
+};
+
+function startSoloChallenge(type) {
+  soloChallengeState.active = true;
+  soloChallengeState.type = type;
+  soloChallengeState.timer = 0;
+  soloChallengeState.targetCount = 0;
+
+  soloChallengeState.targets.forEach((t) => scene.remove(t.mesh));
+  soloChallengeState.targets = [];
+
+  const challengesModal = document.getElementById('challenges-modal');
+  if (challengesModal) {
+    challengesModal.classList.add('hidden');
+    challengesModal.classList.remove('flex');
+  }
+
+  if (type === 'targets') {
+    startMatch('bot', '🎯 DRONES CIBLES');
+    p2.hp = 99999;
+    p2.x = 999;
+    p2.mesh.position.set(999, 999, 999);
+
+    const positions = [
+      { x: -8, z: -5 }, { x: 8, z: -5 },
+      { x: -7, z: 6 },  { x: 7, z: 6 },
+      { x: 0, z: -10 }, { x: 0, z: 9 }
+    ];
+
+    positions.forEach((pos) => {
+      const geo = new THREE.SphereGeometry(1.0, 16, 16);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xfacc15,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.7,
+        metalness: 0.7,
+        roughness: 0.2
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(pos.x, 1.2, pos.z);
+      scene.add(mesh);
+      soloChallengeState.targets.push({ mesh, hp: 20, x: pos.x, z: pos.z });
+    });
+
+    setCoachText('🎯 <span class="text-cyan-300">DÉFI 1 :</span> Détruis les 6 drones dorés le plus vite possible !');
+  } else if (type === 'survival') {
+    startMatch('bot', '⚠️ TOURELLES RAPIDES');
+    gameState.botDifficulty = 'hard';
+    setCoachText('🛡️ <span class="text-amber-300">DÉFI 2 :</span> Survis 20 secondes face au tir continu !');
+  } else if (type === 'dash_smash') {
+    startMatch('bot', '💥 CIBLES DASH');
+    p2.hp = 99999;
+    p2.x = 999;
+    p2.mesh.position.set(999, 999, 999);
+
+    for (let i = 0; i < 4; i++) {
+      const mesh = createCyberFighterMesh(0xfb7185, true, false);
+      const angle = (i / 4) * Math.PI * 2;
+      const x = Math.cos(angle) * 9;
+      const z = Math.sin(angle) * 9;
+      mesh.position.set(x, 0.9, z);
+      scene.add(mesh);
+      activeEchoClones.push({
+        team: 2,
+        color: 0xfb7185,
+        recording: [],
+        frameIndex: 0,
+        mesh,
+        hp: 1,
+        maxHp: 1
+      });
+    }
+    setCoachText('💥 <span class="text-rose-300">DÉFI 3 :</span> Utilise le bouton DASH pour percuter et pulvériser les 4 clones !');
+  }
 }
 
 // Global Game State
@@ -1419,6 +1816,7 @@ function updateFighter(fighter, dt, didShootThisFrame) {
           showBanner('💥 COLLISION DE PARADOXE : CLONE ENNEMI DÉTRUIT EN DASH !', '💥');
           if (fighter.team === 1) {
             p1DashKills++;
+            unlockAchievement('dash_crush_3');
             triggerHaptics([60, 40, 80]);
             PlayerStats.clonesDestroyed = (PlayerStats.clonesDestroyed || 0) + 1;
             PlayerStats.save();
@@ -1585,6 +1983,7 @@ function endMatch(winnerTeam) {
   const dashEl = document.getElementById('stat-dash-kills');
   const timeEl = document.getElementById('stat-match-time');
   if (precEl) precEl.textContent = `${accuracy}% (${p1HitsLanded}/${p1ShotsFired})`;
+  if (accuracy >= 75 && p1ShotsFired >= 8) unlockAchievement('accuracy_elite');
   if (dashEl) dashEl.textContent = `${p1DashKills} détruit${p1DashKills > 1 ? 's' : ''}`;
   if (timeEl) timeEl.textContent = `${durationSec}s`;
 
@@ -1718,7 +2117,18 @@ function animate(now) {
   }
 
   if (gameState.running && !gameState.paused) {
-    // 1. Update Time-Loop Countdown & Tension Music
+    
+      if (soloChallengeState.active) {
+        soloChallengeState.timer += dt;
+        if (soloChallengeState.type === 'survival' && soloChallengeState.timer >= 20.0) {
+          soloChallengeState.active = false;
+          showBanner('🎉 DÉFI SURVIE RÉUSSI ! Médaille : 🥇 OR', '🥇');
+          unlockAchievement('first_win');
+          setTimeout(() => endMatch(1), 1200);
+        }
+      }
+
+        // 1. Update Time-Loop Countdown & Tension Music
     gameState.loopTimer -= dt;
     const timerEl = document.getElementById('hud-loop-timer');
     if (timerEl) {
@@ -1913,6 +2323,39 @@ function animate(now) {
 
       let removeProj = pr.life <= 0;
 
+      
+      // Check hits against Solo Challenge Targets
+      if (soloChallengeState.active && soloChallengeState.type === 'targets' && !removeProj) {
+        for (let t = soloChallengeState.targets.length - 1; t >= 0; t--) {
+          const dtgt = soloChallengeState.targets[t];
+          if (Math.hypot(pr.x - dtgt.x, pr.z - dtgt.z) < 1.35) {
+            removeProj = true;
+            dtgt.hp -= 15;
+            spawnExplosion(dtgt.x, 1.2, dtgt.z, 0xfacc15, 12);
+            spawnDamageNumber(dtgt.x, 2.0, dtgt.z, '-15', '#facc15');
+            soundFX.playHit();
+            if (dtgt.hp <= 0) {
+              scene.remove(dtgt.mesh);
+              soloChallengeState.targets.splice(t, 1);
+              spawnExplosion(dtgt.x, 1.2, dtgt.z, 0xfacc15, 28);
+              spawnShockwave(dtgt.x, dtgt.z, 0xfacc15, 4.0);
+              soundFX.playCloneDestroy();
+              showBanner(`🎯 DRONE DÉTRUIT ! (${6 - soloChallengeState.targets.length}/6)`, '🎯');
+              if (soloChallengeState.targets.length === 0) {
+                const timeTaken = Math.round(soloChallengeState.timer);
+                let medal = '🥉 Bronze';
+                if (timeTaken <= 15) medal = '🥇 OR';
+                else if (timeTaken <= 25) medal = '🥈 ARGENT';
+                showBanner(`🎉 DÉFI TERMINÉ EN ${timeTaken}s ! Médaille : ${medal}`, '🥇');
+                unlockAchievement('first_win');
+                setTimeout(() => endMatch(1), 1200);
+              }
+            }
+            break;
+          }
+        }
+      }
+
       // Pillar Obstacle Bounces
       for (const obs of obstacles) {
         const dx = pr.x - obs.x;
@@ -1965,6 +2408,7 @@ function animate(now) {
           soundFX.playReflect();
           spawnShockwave(target.x, target.z, 0x22d3ee, 2.5);
           spawnDamageNumber(target.x, 1.8, target.z, '⚡ RENVOI !', '#22d3ee');
+          if (target.team === 1) unlockAchievement('emp_deflect');
         } else if (target.dashActiveTimer > 0) {
           removeProj = true;
           spawnShockwave(target.x, target.z, 0xfacc15, 2.8);
@@ -2118,7 +2562,14 @@ function animate(now) {
   cyanPointLight.position.set(p1.x, 4, p1.z);
   pinkPointLight.position.set(p2.x, 4, p2.z);
 
+    if (killcamActive && killcamTarget) {
+    killcamAngle += rawDt * 2.8;
+    camera.position.set(killcamTarget.x + Math.cos(killcamAngle) * 8.5, 4.5, killcamTarget.z + Math.sin(killcamAngle) * 8.5);
+    camera.lookAt(killcamTarget.x, 1.0, killcamTarget.z);
+  }
+
   renderer.render(scene, camera);
+  renderTacticalRadar();
 
   // Update 2D Floating Labels
   updateFloatingMarker('marker-p1', p1.x, 2.7, p1.z);
@@ -2155,6 +2606,7 @@ function startMatch(mode, opponentLabel) {
   document.getElementById('gameover-modal').classList.add('hidden');
   document.getElementById('gameover-modal').classList.remove('flex');
   document.getElementById('hud-center-panel').classList.remove('hidden');
+  const radarBox = document.getElementById('tactical-radar-box'); if (radarBox) radarBox.classList.remove('hidden');
   document.getElementById('hud-center-panel').classList.add('flex');
   document.getElementById('coach-bar').classList.remove('hidden');
   document.getElementById('btn-pause-game').classList.remove('hidden');
@@ -2270,6 +2722,7 @@ document.getElementById('btn-home-menu').addEventListener('click', () => {
   document.getElementById('gameover-modal').classList.add('hidden');
   document.getElementById('gameover-modal').classList.remove('flex');
   document.getElementById('hud-center-panel').classList.add('hidden');
+  const radarBox = document.getElementById('tactical-radar-box'); if (radarBox) radarBox.classList.add('hidden');
   document.getElementById('coach-bar').classList.add('hidden');
   document.getElementById('btn-pause-game').classList.add('hidden');
   document.getElementById('ingame-controls-footer').classList.add('hidden');
@@ -2436,11 +2889,68 @@ if (toggleHapticsEl) {
   });
 }
 
+
+// Achievements Modal Listeners
+const achModal = document.getElementById('achievements-modal');
+const btnOpenAch = document.getElementById('btn-achievements-modal');
+const btnCloseAch = document.getElementById('btn-close-achievements');
+const btnOkAch = document.getElementById('btn-ok-achievements');
+
+if (btnOpenAch && achModal) {
+  btnOpenAch.addEventListener('click', () => {
+    if (gameState.running && !gameState.paused) togglePause();
+    renderAchievementsModal();
+    achModal.classList.remove('hidden');
+    achModal.classList.add('flex');
+  });
+}
+function closeAchModal() {
+  if (achModal) {
+    achModal.classList.add('hidden');
+    achModal.classList.remove('flex');
+  }
+  if (gameState.running && gameState.paused) togglePause();
+}
+if (btnCloseAch) btnCloseAch.addEventListener('click', closeAchModal);
+if (btnOkAch) btnOkAch.addEventListener('click', closeAchModal);
+
+// Challenges Modal Listeners
+const chalModal = document.getElementById('challenges-modal');
+const btnOpenChal = document.getElementById('btn-open-challenges');
+const btnCloseChal = document.getElementById('btn-close-challenges');
+
+if (btnOpenChal && chalModal) {
+  btnOpenChal.addEventListener('click', () => {
+    chalModal.classList.remove('hidden');
+    chalModal.classList.add('flex');
+  });
+}
+if (btnCloseChal && chalModal) {
+  btnCloseChal.addEventListener('click', () => {
+    chalModal.classList.add('hidden');
+    chalModal.classList.remove('flex');
+  });
+}
+
+document.querySelectorAll('.btn-start-challenge').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const cType = btn.getAttribute('data-challenge');
+    startSoloChallenge(cType);
+  });
+});
+
 // Boot on load
 window.onload = () => {
   PlayerStats.load();
+  loadAchievements();
   initPeerMultiplayer();
   initVirtualJoystick();
+
+  // Load saved arena theme
+  try {
+    const savedArena = localStorage.getItem('echo_arena_theme_v2') || 'cyber';
+    applyArenaTheme(savedArena);
+  } catch (e) {}
 
   // Load saved skin
   try {

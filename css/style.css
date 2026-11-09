@@ -185,6 +185,37 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 0 14px currentColor;
 }
 
+/* Arena Choice Buttons */
+.arena-choice-btn {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.arena-choice-btn.active {
+  transform: translateY(-1px) scale(1.03);
+  border-color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.35);
+}
+
+/* Golden Achievement Unlock Banner Animation */
+.achievement-popup {
+  animation: slideAchievement 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes slideAchievement {
+  0% { opacity: 0; transform: translate(-50%, -24px) scale(0.9); }
+  10% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+  18% { transform: translate(-50%, 0) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -24px); }
+}
+
+/* Killcam Cinematic Flash */
+.killcam-flash {
+  animation: killcamAnim 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes killcamAnim {
+  0% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

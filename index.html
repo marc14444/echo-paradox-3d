@@ -55,6 +55,21 @@
   <!-- Time-Loop Rewind Visual Flash Overlay -->
   <div id="rewind-overlay" class="pointer-events-none fixed inset-0 z-20 hidden bg-cyan-400/30 backdrop-invert"></div>
 
+  <!-- Killcam Slow-Mo Flash Overlay -->
+  <div id="killcam-overlay" class="pointer-events-none fixed inset-0 z-30 hidden bg-cyan-300/25 backdrop-blur-sm killcam-flash"></div>
+
+  <!-- Golden Achievement Unlocked Notification Container -->
+  <div id="achievement-popup-container" class="pointer-events-none fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2"></div>
+
+  <!-- Tactical Mini-Radar HUD (Visible during match) -->
+  <div id="tactical-radar-box" class="fixed top-14 right-3 sm:right-5 z-20 hidden pointer-events-none hud-glass rounded-2xl p-1.5 border border-cyan-500/40 shadow-xl">
+    <div class="flex items-center justify-between px-1 pb-1 text-[9px] font-cyber font-bold text-cyan-300">
+      <span>RADAR AR</span>
+      <span class="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+    </div>
+    <canvas id="radar-canvas" width="84" height="84" class="rounded-xl bg-slate-950/85"></canvas>
+  </div>
+
   <!-- TOP NAVIGATION / HUD BAR -->
   <header class="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 pointer-events-none">
     <!-- Brand & Camera Mode -->
@@ -129,6 +144,9 @@
       </button>
       <button id="btn-aim-mode" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-cyan-300 hover:border-cyan-400 transition" title="Basculer entre visée automatique et manuelle (Touche T)">
         🎯 <span id="aim-mode-label" class="hidden sm:inline">Visée: Auto</span>
+      </button>
+      <button id="btn-achievements-modal" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:border-amber-400 transition" title="Succès et trophées débloqués">
+        🏆 <span class="hidden xl:inline">Succès</span>
       </button>
       <button id="btn-settings-modal" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-cyan-300 hover:border-cyan-400 transition" title="Paramètres et volumes audio">
         ⚙️ <span class="hidden md:inline">Options</span>
@@ -221,6 +239,25 @@
           </button>
           <button data-skin="white" data-color="0xe2e8f0" class="skin-choice-btn flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold border border-slate-700 bg-slate-800/80 text-slate-200 hover:border-white">
             <span class="h-2.5 w-2.5 rounded-full bg-white"></span> Fantôme
+          </button>
+        </div>
+      </div>
+
+      <!-- ARENA ENVIRONMENT SELECTOR -->
+      <div class="mt-2.5 rounded-2xl hud-glass border border-cyan-500/30 p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="font-cyber font-bold text-amber-300">🏟️ ARÈNE 3D :</span>
+          <span class="text-slate-300">Choisis ton environnement :</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button data-arena="cyber" class="arena-choice-btn active rounded-xl px-2.5 py-1 font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200">
+            🟦 Cyber Néon
+          </button>
+          <button data-arena="magma" class="arena-choice-btn rounded-xl px-2.5 py-1 font-bold border border-slate-700 bg-slate-800/80 text-orange-300 hover:border-orange-400">
+            🌋 Noyau Magma
+          </button>
+          <button data-arena="void" class="arena-choice-btn rounded-xl px-2.5 py-1 font-bold border border-slate-700 bg-slate-800/80 text-purple-300 hover:border-purple-400">
+            🌌 Void Nébuleuse
           </button>
         </div>
       </div>
@@ -334,9 +371,6 @@
               <button id="btn-copy-direct-link" class="w-full rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 py-1.5 text-xs font-bold text-cyan-300 transition flex items-center justify-center gap-1.5">
                 🔗 Copier le Lien d'Invitation Direct (1 Clic)
               </button>
-              <button id="btn-copy-direct-link" class="w-full rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 py-1.5 text-xs font-bold text-cyan-300 transition flex items-center justify-center gap-1.5">
-                🔗 Copier le Lien d'Invitation Direct (1 Clic)
-              </button>
               <div class="flex gap-1.5">
                 <input id="input-join-code" type="text" placeholder="Code ami (ex: ECHO-4821)" class="w-full rounded-lg bg-slate-900/90 px-2.5 py-1.5 text-xs text-white border border-slate-700 focus:border-amber-400 focus:outline-none uppercase font-mono" />
                 <button id="btn-join-online" class="rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 transition shrink-0">
@@ -350,6 +384,27 @@
           </div>
           <button id="btn-sim-online" class="w-full rounded-xl py-2.5 mt-3 border border-amber-400/50 bg-amber-500/15 hover:bg-amber-500/25 font-cyber text-xs font-bold text-amber-200 transition">
             🌐 MATCHMAKING RAPIDE (TEST MONDIAL)
+          </button>
+        </div>
+
+        <!-- MODE 4: SOLO CHALLENGES & DOJO (FULL WIDTH BANNER) -->
+        <div class="hud-glass rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-emerald-500/50 hover:border-emerald-400 transition md:col-span-3 bg-gradient-to-r from-emerald-950/40 via-slate-900/80 to-slate-900/90">
+          <div class="flex items-center gap-3.5">
+            <div class="h-12 w-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-2xl shrink-0">
+              🎯
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="rounded bg-emerald-500/25 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-400/30">NOUVEAU</span>
+                <h3 class="font-cyber text-sm sm:text-base font-bold text-white">DÉFIS SOLO & DOJO D'ENTRAÎNEMENT</h3>
+              </div>
+              <p class="text-xs text-slate-300 mt-0.5">
+                Entraîne-toi sur 3 épreuves chrono sans pression : <strong>Stand de tir</strong>, <strong>Esquive de tourelles</strong> et <strong>Paradox Smash</strong> avec médailles Or/Argent/Bronze !
+              </p>
+            </div>
+          </div>
+          <button id="btn-open-challenges" class="neon-btn-cyan rounded-xl px-5 py-2.5 font-cyber text-xs font-bold text-white shrink-0 shadow-lg border-emerald-400">
+            ⚡ SÉLECTIONNER UN DÉFI
           </button>
         </div>
       </div>
@@ -549,6 +604,101 @@
         <button id="btn-ok-settings" class="neon-btn-cyan rounded-xl px-6 py-2.5 font-cyber text-xs font-bold text-white">
           Enregistrer & Fermer
         </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ACHIEVEMENTS / TROPHIES MODAL -->
+  <div id="achievements-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="hud-glass w-full max-w-xl rounded-3xl p-6 border border-amber-400/50 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-cyber text-lg font-bold text-amber-300 flex items-center gap-2">
+          <span>🏆</span> Trophées & Succès Temporels
+        </h3>
+        <button id="btn-close-achievements" class="rounded-lg bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:text-white">✕</button>
+      </div>
+      <div id="achievements-list" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Dynamic achievement cards populated by JS -->
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button id="btn-ok-achievements" class="neon-btn-cyan rounded-xl px-6 py-2.5 font-cyber text-xs font-bold text-white">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOLO CHALLENGES MODAL -->
+  <div id="challenges-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="hud-glass w-full max-w-2xl rounded-3xl p-6 border border-emerald-400/50 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-cyber text-lg font-bold text-emerald-300 flex items-center gap-2">
+          <span>🎯</span> Missions d'Entraînement & Défis Solo
+        </h3>
+        <button id="btn-close-challenges" class="rounded-lg bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-slate-300 mt-2">
+        Choisis une mission pour tester tes réflexes. Chaque défi propose des médailles selon ton chrono !
+      </p>
+
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <!-- Challenge 1 -->
+        <div class="rounded-2xl bg-slate-900/90 p-4 border border-cyan-500/40 flex flex-col justify-between">
+          <div>
+            <div class="text-2xl">🎯</div>
+            <h4 class="font-cyber text-sm font-bold text-cyan-300 mt-2">1. Stand de Tir</h4>
+            <p class="text-[11px] text-slate-300 mt-1">
+              Détruis les 6 drones cibles le plus vite possible.
+            </p>
+            <div class="mt-3 text-[10px] space-y-0.5 text-slate-400 font-mono">
+              <div>🥇 Or : &lt; 15s</div>
+              <div>🥈 Argent : &lt; 25s</div>
+              <div>🥉 Bronze : &lt; 40s</div>
+            </div>
+          </div>
+          <button data-challenge="targets" class="btn-start-challenge neon-btn-cyan w-full rounded-xl py-2 mt-4 font-cyber text-xs font-bold text-white">
+            Lancer Défi
+          </button>
+        </div>
+
+        <!-- Challenge 2 -->
+        <div class="rounded-2xl bg-slate-900/90 p-4 border border-amber-500/40 flex flex-col justify-between">
+          <div>
+            <div class="text-2xl">🛡️</div>
+            <h4 class="font-cyber text-sm font-bold text-amber-300 mt-2">2. Esquive Écho</h4>
+            <p class="text-[11px] text-slate-300 mt-1">
+              Survis 20 secondes sans arme face au feu de 2 tourelles !
+            </p>
+            <div class="mt-3 text-[10px] space-y-0.5 text-slate-400 font-mono">
+              <div>🥇 Or : 20s (100 PV)</div>
+              <div>🥈 Argent : 20s (&gt;50 PV)</div>
+              <div>🥉 Bronze : Survivre</div>
+            </div>
+          </div>
+          <button data-challenge="survival" class="btn-start-challenge w-full rounded-xl py-2 mt-4 font-cyber text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 transition">
+            Lancer Défi
+          </button>
+        </div>
+
+        <!-- Challenge 3 -->
+        <div class="rounded-2xl bg-slate-900/90 p-4 border border-rose-500/40 flex flex-col justify-between">
+          <div>
+            <div class="text-2xl">💥</div>
+            <h4 class="font-cyber text-sm font-bold text-rose-300 mt-2">3. Paradox Smash</h4>
+            <p class="text-[11px] text-slate-300 mt-1">
+              Aucun tir ! Détruis 4 clones fantômes uniquement avec le DASH !
+            </p>
+            <div class="mt-3 text-[10px] space-y-0.5 text-slate-400 font-mono">
+              <div>🥇 Or : &lt; 18s</div>
+              <div>🥈 Argent : &lt; 30s</div>
+              <div>🥉 Bronze : Réussi</div>
+            </div>
+          </div>
+          <button data-challenge="dash_smash" class="btn-start-challenge neon-btn-pink w-full rounded-xl py-2 mt-4 font-cyber text-xs font-bold text-white">
+            Lancer Défi
+          </button>
+        </div>
       </div>
     </div>
   </div>
