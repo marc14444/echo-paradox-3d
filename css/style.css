@@ -91,6 +91,73 @@ body, html {
   transform: translate(-50%, -100%);
   transition: opacity 0.15s;
 }
+
+/* Floating 3D Damage Numbers */
+.damage-number {
+  position: fixed;
+  pointer-events: none;
+  z-index: 25;
+  transform: translate(-50%, -50%);
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: 15px;
+  text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+  will-change: transform, opacity;
+  animation: floatDamage 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes floatDamage {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+  25% {
+    transform: translate(-50%, -90%) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(0.85);
+  }
+}
+
+/* Virtual Touch Joystick */
+#virtual-joystick-zone {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 120px;
+  height: 120px;
+  z-index: 25;
+  pointer-events: auto;
+  touch-action: none;
+}
+.joystick-base {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(8, 20, 40, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 22px rgba(14, 165, 233, 0.25), inset 0 0 15px rgba(56, 189, 248, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.joystick-knob {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #38bdf8 0%, #0284c7 100%);
+  border: 2px solid #e0f2fe;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.85);
+  position: absolute;
+  top: 36px;
+  left: 36px;
+  pointer-events: none;
+  transition: transform 0.04s ease-out;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

@@ -1,20 +1,170 @@
 // =========================================================================
-// 1. SYNTHESIZED CYBER AUDIO ENGINE (Web Audio API - Zero external files)
+// ECHO-PARADOX 3D — ADVANCED CYBER GAME ENGINE
+// Three.js + Web Audio API (Procedural Synthwave) + WebRTC PeerJS
+// =========================================================================
+
+// =========================================================================
+// 1. SYNTHESIZED CYBER AUDIO & PROCEDURAL SYNTHWAVE MUSIC ENGINE
 // =========================================================================
 class CyberAudio {
   constructor() {
     this.ctx = null;
     this.enabled = true;
+    this.musicEnabled = true;
+
+    // Master gains
+    this.sfxGain = null;
+    this.musicGain = null;
+
+    // Synthwave Sequencer State
+    this.seqTimer = null;
+    this.currentStep = 0;
+    this.inTensionMode = false;
+    this.lastBeepSecond = -1;
+
+    // D minor 16-step synthwave bassline frequencies
+    // D2=73.4, F2=87.3, G2=98.0, A2=110.0, Bb2=116.5, C3=130.8, D3=146.8
+    this.bassPattern = [
+      73.4, 73.4, 146.8, 73.4,
+      87.3, 73.4, 98.0, 73.4,
+      110.0, 73.4, 87.3, 73.4,
+      130.8, 110.0, 98.0, 87.3
+    ];
   }
+
   init() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+        this.sfxGain.connect(this.ctx.destination);
+
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+        this.musicGain.connect(this.ctx.destination);
+      }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
+
+  // --- PROCEDURAL SYNTHWAVE MUSIC SEQUENCER ---
+  startBGM() {
+    this.init();
+    if (!this.ctx || this.seqTimer || !this.musicEnabled) return;
+
+    // 120 BPM = 500ms per quarter note => 125ms per 16th step
+    this.currentStep = 0;
+    this.seqTimer = setInterval(() => {
+      if (!this.musicEnabled || !this.ctx) return;
+      this.playSequencerStep();
+    }, 125);
+  }
+
+  stopBGM() {
+    if (this.seqTimer) {
+      clearInterval(this.seqTimer);
+      this.seqTimer = null;
+    }
+  }
+
+  toggleBGM() {
+    this.musicEnabled = !this.musicEnabled;
+    if (this.musicEnabled) {
+      this.startBGM();
+    } else {
+      this.stopBGM();
+    }
+    return this.musicEnabled;
+  }
+
+  playSequencerStep() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const step = this.currentStep % 16;
+    let baseFreq = this.bassPattern[step];
+
+    // In tension mode (last 3.5s before rewind), raise octave and filter
+    if (this.inTensionMode) {
+      baseFreq *= 1.5;
+    }
+
+    // 1. Synth Bass Note (Sawtooth + Sub-Sine + Lowpass Filter)
+    const osc = this.ctx.createOscillator();
+    const subOsc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const noteGain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(baseFreq, now);
+
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(baseFreq * 0.5, now);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(this.inTensionMode ? 1900 : 720, now);
+    filter.Q.setValueAtTime(3.5, now);
+
+    noteGain.gain.setValueAtTime(0.18, now);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+    osc.connect(filter);
+    subOsc.connect(filter);
+    filter.connect(noteGain);
+    noteGain.connect(this.musicGain);
+
+    osc.start(now);
+    subOsc.start(now);
+    osc.stop(now + 0.12);
+    subOsc.stop(now + 0.12);
+
+    // 2. Synthesized Kick (Every 4 steps: 0, 4, 8, 12)
+    if (step % 4 === 0) {
+      const kickOsc = this.ctx.createOscillator();
+      const kickGain = this.ctx.createGain();
+      kickOsc.type = 'sine';
+      kickOsc.frequency.setValueAtTime(140, now);
+      kickOsc.frequency.exponentialRampToValueAtTime(32, now + 0.08);
+
+      kickGain.gain.setValueAtTime(0.32, now);
+      kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+      kickOsc.connect(kickGain);
+      kickGain.connect(this.musicGain);
+      kickOsc.start(now);
+      kickOsc.stop(now + 0.1);
+    }
+
+    // 3. Synthesized Hi-Hat (Every off-beat step: 2, 6, 10, 14)
+    if (step % 2 === 0) {
+      const hhOsc = this.ctx.createOscillator();
+      const hhFilter = this.ctx.createBiquadFilter();
+      const hhGain = this.ctx.createGain();
+
+      hhOsc.type = 'square';
+      hhOsc.frequency.setValueAtTime(7500, now);
+
+      hhFilter.type = 'highpass';
+      hhFilter.frequency.setValueAtTime(6000, now);
+
+      hhGain.gain.setValueAtTime(0.035, now);
+      hhGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+
+      hhOsc.connect(hhFilter);
+      hhFilter.connect(hhGain);
+      hhGain.connect(this.musicGain);
+
+      hhOsc.start(now);
+      hhOsc.stop(now + 0.035);
+    }
+
+    this.currentStep++;
+  }
+
+  // --- SOUND EFFECTS (SFX) ---
   playLaser(isEcho = false) {
     if (!this.enabled) return;
     this.init();
@@ -23,15 +173,16 @@ class CyberAudio {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = isEcho ? 'triangle' : 'sawtooth';
-    osc.frequency.setValueAtTime(isEcho ? 660 : 880, now);
+    osc.frequency.setValueAtTime(isEcho ? 640 : 880, now);
     osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
-    gain.gain.setValueAtTime(isEcho ? 0.05 : 0.11, now);
+    gain.gain.setValueAtTime(isEcho ? 0.06 : 0.12, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.sfxGain);
     osc.start(now);
     osc.stop(now + 0.13);
   }
+
   playDash() {
     if (!this.enabled) return;
     this.init();
@@ -45,10 +196,11 @@ class CyberAudio {
     gain.gain.setValueAtTime(0.18, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.sfxGain);
     osc.start(now);
     osc.stop(now + 0.2);
   }
+
   playHit() {
     if (!this.enabled) return;
     this.init();
@@ -57,15 +209,91 @@ class CyberAudio {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'square';
-    osc.frequency.setValueAtTime(160, now);
-    osc.frequency.exponentialRampToValueAtTime(45, now + 0.2);
+    osc.frequency.setValueAtTime(170, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.18);
     gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.sfxGain);
     osc.start(now);
-    osc.stop(now + 0.22);
+    osc.stop(now + 0.2);
   }
+
+  playCloneDestroy() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Shatter sound: chord drop + noise burst
+    [320, 480, 720].forEach((freq) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.28);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.29);
+    });
+  }
+
+  playReflect() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.14);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  }
+
+  playPowerup() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    [440, 660, 880, 1320].forEach((f, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + idx * 0.05);
+      gain.gain.setValueAtTime(0.12, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.18);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.19);
+    });
+  }
+
+  playCountdownBeep(n) {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(n === 1 ? 1200 : 850, now);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
   playTimeRewind() {
     if (!this.enabled) return;
     this.init();
@@ -80,11 +308,12 @@ class CyberAudio {
       gain.gain.setValueAtTime(0.12, now + idx * 0.06);
       gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.26);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.sfxGain);
       osc.start(now + idx * 0.06);
       osc.stop(now + idx * 0.06 + 0.27);
     });
   }
+
   playVictory() {
     if (!this.enabled) return;
     this.init();
@@ -98,7 +327,7 @@ class CyberAudio {
       gain.gain.setValueAtTime(0.18, now + idx * 0.11);
       gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.35);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.sfxGain);
       osc.start(now + idx * 0.11);
       osc.stop(now + idx * 0.11 + 0.36);
     });
@@ -113,22 +342,25 @@ const soundFX = new CyberAudio();
 const PlayerStats = {
   wins: 0,
   echoes: 0,
+  clonesDestroyed: 0,
   load() {
     try {
-      const raw = localStorage.getItem('echo_paradox_stats_v1');
+      const raw = localStorage.getItem('echo_paradox_stats_v2');
       if (raw) {
         const data = JSON.parse(raw);
         this.wins = Number(data.wins) || 0;
         this.echoes = Number(data.echoes) || 0;
+        this.clonesDestroyed = Number(data.clonesDestroyed) || 0;
       }
     } catch (e) {}
     this.updateUI();
   },
   save() {
     try {
-      localStorage.setItem('echo_paradox_stats_v1', JSON.stringify({
+      localStorage.setItem('echo_paradox_stats_v2', JSON.stringify({
         wins: this.wins,
-        echoes: this.echoes
+        echoes: this.echoes,
+        clonesDestroyed: this.clonesDestroyed
       }));
     } catch (e) {}
     this.updateUI();
@@ -149,7 +381,7 @@ const PlayerStats = {
 };
 
 // =========================================================================
-// 3. THREE.JS 3D HOLOGRAPHIC AR ENGINE & TIME-CLONE GAMEPLAY
+// 3. THREE.JS 3D HOLOGRAPHIC AR ENGINE & SHARED ASSETS (0 Memory Leaks)
 // =========================================================================
 const container = document.getElementById('game-canvas-container');
 const scene = new THREE.Scene();
@@ -177,6 +409,16 @@ const pinkPointLight = new THREE.PointLight(0xf43f5e, 2.5, 35);
 pinkPointLight.position.set(12, 5, 0);
 scene.add(pinkPointLight);
 
+// Shared Geometries to prevent GPU buffer memory leaks
+const sharedProjGeo = new THREE.SphereGeometry(0.42, 12, 12);
+const sharedEchoProjGeo = new THREE.SphereGeometry(0.32, 10, 10);
+const sharedTrailGeo = new THREE.CylinderGeometry(0.12, 0.02, 1.5, 8);
+sharedTrailGeo.rotateZ(Math.PI / 2);
+const sharedParticleGeo = new THREE.BoxGeometry(0.24, 0.24, 0.24);
+const sharedShockwaveGeo = new THREE.RingGeometry(0.3, 0.55, 32);
+sharedShockwaveGeo.rotateX(-Math.PI / 2);
+const sharedThrusterGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+
 // Arena Constants
 const ARENA_RADIUS = 19;
 const obstacles = [];
@@ -185,7 +427,7 @@ const obstacles = [];
 const arenaGroup = new THREE.Group();
 scene.add(arenaGroup);
 
-// Base Dark Reflective Disc (Also used for Mouse Raycasting!)
+// Base Dark Reflective Disc (Also used for Mouse Raycasting)
 const baseGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS * 0.92, 1.2, 32);
 const baseMat = new THREE.MeshStandardMaterial({
   color: 0x091326,
@@ -224,7 +466,7 @@ const orbitalRing2 = new THREE.Mesh(
 orbitalRing2.rotation.x = Math.PI / 1.8;
 arenaGroup.add(orbitalRing2);
 
-// 4 Tactical Holographic Cover Pillars inside the Arena
+// 4 Tactical Holographic Cover Pillars
 const pillarPositions = [
   { x: -6.8, z: -6.8 },
   { x: 6.8, z: -6.8 },
@@ -251,25 +493,45 @@ pillarPositions.forEach((pos) => {
   obstacles.push({ x: pos.x, z: pos.z, radius: 1.35, mesh: pillar });
 });
 
-// Central Chrono Core Power-up (Gives Triple Shot + Heal)
-const chronoCoreGroup = new THREE.Group();
-const coreOcta = new THREE.Mesh(
+// MULTI-POWERUP ROTATING SYSTEM
+// Types: 'chrono_core' (Gold - Triple Shot + Heal), 'emp_shield' (Cyan - Reflector Shield), 'time_warp' (Purple - Enemy Slow)
+const powerupState = {
+  active: true,
+  type: 'chrono_core',
+  types: ['chrono_core', 'emp_shield', 'time_warp'],
+  typeIndex: 0,
+  respawnTimer: 0
+};
+
+const powerupGroup = new THREE.Group();
+const powerupCoreMesh = new THREE.Mesh(
   new THREE.OctahedronGeometry(1.05, 0),
-  new THREE.MeshBasicMaterial({ color: 0xfbbf24, wireframe: false })
+  new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
 );
-const coreWire = new THREE.Mesh(
+const powerupHaloMesh = new THREE.Mesh(
   new THREE.OctahedronGeometry(1.45, 0),
-  new THREE.MeshBasicMaterial({ color: 0xfde047, wireframe: true, transparent: true, opacity: 0.8 })
+  new THREE.MeshBasicMaterial({ color: 0xfde047, wireframe: true, transparent: true, opacity: 0.85 })
 );
-chronoCoreGroup.add(coreOcta);
-chronoCoreGroup.add(coreWire);
-chronoCoreGroup.position.set(0, 1.4, 0);
-scene.add(chronoCoreGroup);
+powerupGroup.add(powerupCoreMesh);
+powerupGroup.add(powerupHaloMesh);
+powerupGroup.position.set(0, 1.4, 0);
+scene.add(powerupGroup);
 
-let chronoCoreActive = true;
-let chronoCoreRespawnTimer = 0;
+function setPowerupType(type) {
+  powerupState.type = type;
+  if (type === 'chrono_core') {
+    powerupCoreMesh.material.color.setHex(0xfbbf24);
+    powerupHaloMesh.material.color.setHex(0xfde047);
+  } else if (type === 'emp_shield') {
+    powerupCoreMesh.material.color.setHex(0x22d3ee);
+    powerupHaloMesh.material.color.setHex(0x38bdf8);
+  } else if (type === 'time_warp') {
+    powerupCoreMesh.material.color.setHex(0xa855f7);
+    powerupHaloMesh.material.color.setHex(0xc084fc);
+  }
+}
 
-// Click Target Ring Indicator on Floor (Shows where mouse click moves P1)
+// Click Target Indicator on Floor
 const clickTargetMesh = new THREE.Mesh(
   new THREE.RingGeometry(0.5, 0.85, 24),
   new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide, transparent: true, opacity: 0.0 })
@@ -279,8 +541,8 @@ clickTargetMesh.position.y = 0.1;
 scene.add(clickTargetMesh);
 
 // Background Starfield
-const starsGeo = new THREE.BufferGeometry();
 const starCount = 350;
+const starsGeo = new THREE.BufferGeometry();
 const starPositions = new Float32Array(starCount * 3);
 for (let i = 0; i < starCount * 3; i += 3) {
   starPositions[i] = (Math.random() - 0.5) * 110;
@@ -293,66 +555,93 @@ const starField = new THREE.Points(starsGeo, starsMat);
 scene.add(starField);
 
 // =========================================================================
-// 4. PLAYER, HOLOGRAPHIC CLONE & AIM LASER BUILDERS
+// 4. SCI-FI STARFIGHTER MESH BUILDER & ENTITY DEFINITIONS
 // =========================================================================
 function createCyberFighterMesh(colorHex, isGhost = false, hasAimLaser = false) {
   const group = new THREE.Group();
 
-  // Main Futuristic Hover Chassis (Slightly larger & brighter for visibility)
-  const bodyGeo = new THREE.ConeGeometry(1.15, 2.5, 6);
-  bodyGeo.rotateX(Math.PI / 2);
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: colorHex,
+  // 1. Sleek Central Fuselage
+  const hullGeo = new THREE.ConeGeometry(0.85, 2.6, 6);
+  hullGeo.rotateX(Math.PI / 2);
+  const hullMat = new THREE.MeshStandardMaterial({
+    color: isGhost ? colorHex : 0x091428,
     emissive: colorHex,
-    emissiveIntensity: isGhost ? 0.9 : 0.55,
-    metalness: 0.7,
+    emissiveIntensity: isGhost ? 0.9 : 0.45,
+    metalness: 0.8,
     roughness: 0.2,
     transparent: isGhost,
     opacity: isGhost ? 0.48 : 1.0
   });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.9;
-  group.add(body);
+  const hull = new THREE.Mesh(hullGeo, hullMat);
+  hull.position.y = 0.85;
+  group.add(hull);
 
-  // Holographic Wireframe Shell
-  const wireGeo = new THREE.EdgesGeometry(bodyGeo);
+  // Wireframe outline
+  const wireGeo = new THREE.EdgesGeometry(hullGeo);
   const wireMat = new THREE.LineBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: isGhost ? 0.85 : 0.95
+    opacity: isGhost ? 0.75 : 0.95
   });
   const wire = new THREE.LineSegments(wireGeo, wireMat);
-  body.add(wire);
+  hull.add(wire);
 
-  // Hover Energy Ring Under Fighter
-  const ringGeo = new THREE.RingGeometry(1.05, 1.4, 24);
-  ringGeo.rotateX(-Math.PI / 2);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: colorHex,
-    side: THREE.DoubleSide,
-    transparent: true,
-    opacity: isGhost ? 0.45 : 0.9
+  // 2. Swept Delta Wings with Glowing Neon Trim
+  const wingShape = new THREE.BoxGeometry(2.7, 0.12, 1.1);
+  const wingMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    emissive: colorHex,
+    emissiveIntensity: 0.5,
+    metalness: 0.85,
+    roughness: 0.2,
+    transparent: isGhost,
+    opacity: isGhost ? 0.45 : 1.0
   });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.position.y = 0.14;
-  group.add(ring);
+  const wings = new THREE.Mesh(wingShape, wingMat);
+  wings.position.set(0, 0.8, -0.3);
+  group.add(wings);
 
-  // Optional Aiming Laser Sight Line (So player sees where their shots go!)
+  // 3. Glowing Cockpit Canopy
+  const canopyGeo = new THREE.SphereGeometry(0.38, 12, 8);
+  canopyGeo.scale(1, 0.7, 1.8);
+  const canopyMat = new THREE.MeshStandardMaterial({
+    color: colorHex,
+    emissive: colorHex,
+    emissiveIntensity: 0.9,
+    metalness: 0.3,
+    roughness: 0.1
+  });
+  const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+  canopy.position.set(0, 1.15, 0.25);
+  group.add(canopy);
+
+  // 4. Twin Rear Thrusters with Emissive Glow Exhaust
+  [-0.45, 0.45].forEach((tx) => {
+    const thrusterGeo = new THREE.CylinderGeometry(0.18, 0.24, 0.5, 8);
+    thrusterGeo.rotateX(Math.PI / 2);
+    const thrusterMat = new THREE.MeshBasicMaterial({ color: colorHex });
+    const thruster = new THREE.Mesh(thrusterGeo, thrusterMat);
+    thruster.position.set(tx, 0.8, -1.25);
+    group.add(thruster);
+  });
+
+  // 5. Aiming Laser Sight (Rotates with ship)
+  let laserLine = null;
   if (hasAimLaser) {
-    const laserGeo = new THREE.CylinderGeometry(0.04, 0.04, 10, 6);
+    const laserGeo = new THREE.CylinderGeometry(0.04, 0.04, 12, 6);
     laserGeo.rotateX(Math.PI / 2);
     const laserMat = new THREE.MeshBasicMaterial({
       color: 0x67e8f9,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.45
     });
-    const laserLine = new THREE.Mesh(laserGeo, laserMat);
-    laserLine.position.set(0, 0.9, 6.2);
+    laserLine = new THREE.Mesh(laserGeo, laserMat);
+    laserLine.position.set(0, 0.85, 7.0);
     group.add(laserLine);
   }
 
-  // Shield Sphere (Visible when dashing / invulnerable)
-  const shieldGeo = new THREE.SphereGeometry(1.75, 18, 18);
+  // 6. Shield Sphere (Dash / EMP Reflective Shield)
+  const shieldGeo = new THREE.SphereGeometry(1.85, 18, 18);
   const shieldMat = new THREE.MeshBasicMaterial({
     color: 0xfacc15,
     wireframe: true,
@@ -360,21 +649,22 @@ function createCyberFighterMesh(colorHex, isGhost = false, hasAimLaser = false) 
     opacity: 0.0
   });
   const shield = new THREE.Mesh(shieldGeo, shieldMat);
-  shield.position.y = 0.9;
+  shield.position.y = 0.85;
   group.add(shield);
 
-  group.userData = { body, ring, shield, shieldMat };
+  group.userData = { hull, shield, shieldMat, laserLine };
   return group;
 }
 
-// Active Game Entities & State
+// Global Game State
 const gameState = {
   running: false,
   paused: false,
   mode: 'bot', // 'bot', 'local', 'online'
-  botDifficulty: 'easy', // Default to 'easy' so new players immediately win & understand!
-  autoFire: true, // Auto-fire ON by default so player only needs to move!
-  cameraMode: 0, // 0: Immersive, 1: Tactical Top-Down, 2: Dynamic AR Orbit
+  botDifficulty: 'easy',
+  autoFire: true,
+  aimMode: 'auto', // 'auto' (Lock on opponent) or 'manual' (Free aim at mouse/stick)
+  cameraMode: 0,
   loopDuration: 10.0,
   loopTimer: 10.0,
   cycleCount: 1,
@@ -385,6 +675,7 @@ const gameState = {
   roundsToWin: 2
 };
 
+// Players
 const p1 = {
   id: 'p1',
   team: 1,
@@ -402,6 +693,8 @@ const p1 = {
   dashCooldown: 0,
   dashActiveTimer: 0,
   tripleShotTimer: 0,
+  empShieldTimer: 0,
+  freezeTimer: 0,
   mesh: createCyberFighterMesh(0x06b6d4, false, true),
   currentRecording: [],
   pastRecordings: []
@@ -423,6 +716,8 @@ const p2 = {
   dashCooldown: 0,
   dashActiveTimer: 0,
   tripleShotTimer: 0,
+  empShieldTimer: 0,
+  freezeTimer: 0,
   mesh: createCyberFighterMesh(0xf43f5e, false, false),
   currentRecording: [],
   pastRecordings: []
@@ -433,15 +728,19 @@ let activeEchoClones = [];
 let projectiles = [];
 let particles = [];
 let shockwaves = [];
+let thrusterParticles = [];
+let damageNumbers = [];
 
 // =========================================================================
-// 5. UNIVERSAL INPUT HANDLING (Keyboard + Mouse Click-to-Move + Touch D-Pad)
+// 5. UNIVERSAL CONTROLS (Keyboard, Mouse Free-Aim, Touch Joystick, Gamepad)
 // =========================================================================
 const keys = {};
-const touchDir = { up: false, down: false, left: false, right: false };
 const raycaster = new THREE.Raycaster();
 const mouseNDC = new THREE.Vector2();
+let mouseWorldPoint = new THREE.Vector3(0, 0, 0);
 let isPointerDownOnArena = false;
+let touchJoystickVec = { x: 0, z: 0 };
+let gpPrevStartPressed = false;
 
 window.addEventListener('keydown', (e) => {
   keys[e.code] = true;
@@ -456,56 +755,119 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyP' && gameState.running) {
     togglePause();
   }
+  // Shortcut 'T' to toggle Free Aim / Auto Aim
+  if (e.code === 'KeyT') {
+    toggleAimMode();
+  }
 });
 
 window.addEventListener('keyup', (e) => {
   keys[e.code] = false;
 });
 
-// Click / Drag directly on 3D Arena to Move P1 & Shoot!
-function updatePointerTarget(clientX, clientY) {
+// Mouse coordinates on Arena Floor Plane (for Free Aim & Click-to-Move)
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+function updateMouseWorldCoordinates(clientX, clientY) {
   mouseNDC.x = (clientX / window.innerWidth) * 2 - 1;
   mouseNDC.y = -(clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, camera);
-  const intersects = raycaster.intersectObject(baseMesh);
-  if (intersects.length > 0) {
-    const pt = intersects[0].point;
-    p1.targetX = pt.x;
-    p1.targetZ = pt.z;
-    clickTargetMesh.position.set(pt.x, 0.12, pt.z);
+  raycaster.ray.intersectPlane(floorPlane, mouseWorldPoint);
+}
+
+window.addEventListener('pointermove', (e) => {
+  updateMouseWorldCoordinates(e.clientX, e.clientY);
+  if (isPointerDownOnArena && gameState.running && !gameState.paused) {
+    p1.targetX = mouseWorldPoint.x;
+    p1.targetZ = mouseWorldPoint.z;
+    clickTargetMesh.position.set(mouseWorldPoint.x, 0.12, mouseWorldPoint.z);
     clickTargetMesh.material.opacity = 0.85;
   }
-}
+});
 
 container.addEventListener('pointerdown', (e) => {
   window.focus();
   if (!gameState.running || gameState.paused) return;
   isPointerDownOnArena = true;
-  updatePointerTarget(e.clientX, e.clientY);
+  updateMouseWorldCoordinates(e.clientX, e.clientY);
+  p1.targetX = mouseWorldPoint.x;
+  p1.targetZ = mouseWorldPoint.z;
+  clickTargetMesh.position.set(mouseWorldPoint.x, 0.12, mouseWorldPoint.z);
+  clickTargetMesh.material.opacity = 0.85;
   triggerShoot(p1, false);
-});
-
-container.addEventListener('pointermove', (e) => {
-  if (!gameState.running || gameState.paused || !isPointerDownOnArena) return;
-  updatePointerTarget(e.clientX, e.clientY);
 });
 
 window.addEventListener('pointerup', () => {
   isPointerDownOnArena = false;
 });
 
-// Touch / Click D-Pad listeners
+// Virtual Touch Joystick Implementation
+const joystickZone = document.getElementById('virtual-joystick-zone');
+const joystickKnob = document.getElementById('joystick-knob');
+let joystickActive = false;
+let joystickCenter = { x: 0, y: 0 };
+
+function initVirtualJoystick() {
+  if (!joystickZone || !joystickKnob) return;
+  // Show joystick if on touch device
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    joystickZone.classList.remove('hidden');
+  }
+
+  const handleTouchStart = (e) => {
+    const touch = e.targetTouches[0];
+    const rect = joystickZone.getBoundingClientRect();
+    joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    joystickActive = true;
+    handleTouchMove(e);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!joystickActive) return;
+    const touch = e.targetTouches[0];
+    const dx = touch.clientX - joystickCenter.x;
+    const dy = touch.clientY - joystickCenter.y;
+    const dist = Math.hypot(dx, dy);
+    const maxR = 42;
+    const clampedDist = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    const kx = Math.cos(angle) * clampedDist;
+    const ky = Math.sin(angle) * clampedDist;
+
+    joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+    touchJoystickVec.x = kx / maxR;
+    touchJoystickVec.z = ky / maxR;
+  };
+
+  const handleTouchEnd = () => {
+    joystickActive = false;
+    joystickKnob.style.transform = `translate(0px, 0px)`;
+    touchJoystickVec.x = 0;
+    touchJoystickVec.z = 0;
+  };
+
+  joystickZone.addEventListener('touchstart', handleTouchStart, { passive: false });
+  joystickZone.addEventListener('touchmove', handleTouchMove, { passive: false });
+  joystickZone.addEventListener('touchend', handleTouchEnd);
+  joystickZone.addEventListener('touchcancel', handleTouchEnd);
+}
+
+// Fallback touch D-Pad listeners
 document.querySelectorAll('.touch-move-btn').forEach((btn) => {
   const dir = btn.getAttribute('data-dir');
   const startMove = (ev) => {
     ev.preventDefault();
     p1.targetX = null;
     p1.targetZ = null;
-    touchDir[dir] = true;
+    if (dir === 'up') touchJoystickVec.z = -1;
+    if (dir === 'down') touchJoystickVec.z = 1;
+    if (dir === 'left') touchJoystickVec.x = -1;
+    if (dir === 'right') touchJoystickVec.x = 1;
   };
   const endMove = (ev) => {
     ev.preventDefault();
-    touchDir[dir] = false;
+    touchJoystickVec.x = 0;
+    touchJoystickVec.z = 0;
   };
   btn.addEventListener('touchstart', startMove, { passive: false });
   btn.addEventListener('touchend', endMove, { passive: false });
@@ -514,18 +876,15 @@ document.querySelectorAll('.touch-move-btn').forEach((btn) => {
   btn.addEventListener('mouseleave', endMove);
 });
 
+// Action Buttons
 document.getElementById('btn-action-shoot').addEventListener('click', () => {
   window.focus();
-  if (gameState.running && !gameState.paused) {
-    triggerShoot(p1, false);
-  }
+  if (gameState.running && !gameState.paused) triggerShoot(p1, false);
 });
 
 document.getElementById('btn-action-dash').addEventListener('click', () => {
   window.focus();
-  if (gameState.running && !gameState.paused) {
-    triggerDash(p1);
-  }
+  if (gameState.running && !gameState.paused) triggerDash(p1);
 });
 
 document.getElementById('btn-autofire-toggle').addEventListener('click', () => {
@@ -541,8 +900,19 @@ document.getElementById('btn-autofire-toggle').addEventListener('click', () => {
   window.focus();
 });
 
+function toggleAimMode() {
+  gameState.aimMode = gameState.aimMode === 'auto' ? 'manual' : 'auto';
+  const label = document.getElementById('aim-mode-label');
+  if (label) {
+    label.textContent = gameState.aimMode === 'auto' ? 'Visée: Auto' : 'Visée: Libre (Souris)';
+  }
+  showToast(gameState.aimMode === 'auto' ? '🎯 Visée Automatique (Verrouillée sur l\'ennemi)' : '🎯 Visée Libre (Dirige les tirs avec la souris/curseur !)');
+}
+
+document.getElementById('btn-aim-mode').addEventListener('click', toggleAimMode);
+
 // =========================================================================
-// 6. 3D TO 2D FLOATING MARKERS PROJECTION (So Player 1 & Enemy are obvious!)
+// 6. 3D TO 2D FLOATING MARKERS & DAMAGE NUMBERS
 // =========================================================================
 function updateFloatingMarker(domId, worldX, worldY, worldZ) {
   const el = document.getElementById(domId);
@@ -564,36 +934,54 @@ function updateFloatingMarker(domId, worldX, worldY, worldZ) {
   el.style.top = `${y}px`;
 }
 
+// 3D Floating Damage Numbers
+function spawnDamageNumber(worldX, worldY, worldZ, text, colorHex = '#f43f5e', isCrit = false) {
+  const containerEl = document.getElementById('damage-numbers-container');
+  if (!containerEl) return;
+  const badge = document.createElement('div');
+  badge.className = 'damage-number';
+  badge.textContent = text;
+  badge.style.color = colorHex;
+  if (isCrit) {
+    badge.style.fontSize = '20px';
+  }
+
+  containerEl.appendChild(badge);
+  damageNumbers.push({
+    el: badge,
+    pos: new THREE.Vector3(worldX, worldY, worldZ),
+    vy: 1.8,
+    life: 0.75
+  });
+}
+
 // =========================================================================
-// 7. COMBAT MECHANICS: SHOOTING, DASHING, SHOCKWAVES & CLONES
+// 7. COMBAT MECHANICS: SHOOTING, DASHING, SHOCKWAVES & PARTICLES
 // =========================================================================
 function spawnShockwave(x, z, colorHex, maxRadius = 4.5) {
-  const geo = new THREE.RingGeometry(0.3, 0.55, 32);
-  geo.rotateX(-Math.PI / 2);
   const mat = new THREE.MeshBasicMaterial({
     color: colorHex,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: 0.9
+    opacity: 0.95
   });
-  const mesh = new THREE.Mesh(geo, mat);
+  const mesh = new THREE.Mesh(sharedShockwaveGeo, mat);
   mesh.position.set(x, 0.18, z);
   scene.add(mesh);
-  shockwaves.push({ mesh, mat, scale: 1, maxScale: maxRadius * 2, opacity: 0.9 });
+  shockwaves.push({ mesh, mat, scale: 1, maxScale: maxRadius * 2, opacity: 0.95 });
 }
 
 function spawnExplosion(x, y, z, colorHex, count = 16) {
+  const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1 });
   for (let i = 0; i < count; i++) {
-    const pGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
-    const pMat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1 });
-    const mesh = new THREE.Mesh(pGeo, pMat);
+    const mesh = new THREE.Mesh(sharedParticleGeo, mat);
     mesh.position.set(x, y, z);
     const angle = Math.random() * Math.PI * 2;
     const speed = 3 + Math.random() * 9;
     scene.add(mesh);
     particles.push({
       mesh,
-      mat: pMat,
+      mat,
       vx: Math.cos(angle) * speed,
       vy: 2 + Math.random() * 6,
       vz: Math.sin(angle) * speed,
@@ -602,26 +990,48 @@ function spawnExplosion(x, y, z, colorHex, count = 16) {
   }
 }
 
+// Thruster Particle Emitter
+function emitThrusterParticle(x, z, angle, colorHex, isDashing = false) {
+  const pMat = new THREE.MeshBasicMaterial({
+    color: colorHex,
+    transparent: true,
+    opacity: isDashing ? 1.0 : 0.65
+  });
+  const mesh = new THREE.Mesh(sharedThrusterGeo, pMat);
+  // Spawn from rear of ship
+  const backX = x - Math.cos(angle) * 1.1;
+  const backZ = z - Math.sin(angle) * 1.1;
+  mesh.position.set(backX, 0.8, backZ);
+  scene.add(mesh);
+
+  const speed = isDashing ? 12 : 3.5;
+  thrusterParticles.push({
+    mesh,
+    mat: pMat,
+    vx: -Math.cos(angle) * speed + (Math.random() - 0.5) * 1.5,
+    vy: (Math.random() - 0.5) * 0.8,
+    vz: -Math.sin(angle) * speed + (Math.random() - 0.5) * 1.5,
+    life: isDashing ? 0.35 : 0.18
+  });
+}
+
 function fireProjectile(ownerTeam, x, z, angle, colorHex, isEcho = false) {
-  const geo = new THREE.SphereGeometry(isEcho ? 0.36 : 0.46, 12, 12);
   const mat = new THREE.MeshBasicMaterial({ color: isEcho ? 0xe0f2fe : colorHex });
-  const mesh = new THREE.Mesh(geo, mat);
+  const mesh = new THREE.Mesh(isEcho ? sharedEchoProjGeo : sharedProjGeo, mat);
   mesh.position.set(x + Math.cos(angle) * 1.4, 0.9, z + Math.sin(angle) * 1.4);
 
-  const trailGeo = new THREE.CylinderGeometry(0.14, 0.03, 1.6, 8);
-  trailGeo.rotateZ(Math.PI / 2);
   const trailMat = new THREE.MeshBasicMaterial({
     color: colorHex,
     transparent: true,
     opacity: 0.8
   });
-  const trail = new THREE.Mesh(trailGeo, trailMat);
+  const trail = new THREE.Mesh(sharedTrailGeo, trailMat);
   trail.position.x = -0.65;
   mesh.add(trail);
   mesh.rotation.y = -angle;
 
   scene.add(mesh);
-  const speed = isEcho ? 19 : 22;
+  const speed = isEcho ? 20 : 23;
   projectiles.push({
     team: ownerTeam,
     isEcho,
@@ -632,17 +1042,17 @@ function fireProjectile(ownerTeam, x, z, angle, colorHex, isEcho = false) {
     mesh,
     color: colorHex,
     bouncesLeft: 1,
-    life: 2.5
+    life: 2.6
   });
 }
 
 function triggerShoot(fighter, isEcho = false) {
   if (fighter.shootCooldown > 0) return false;
-  fighter.shootCooldown = fighter.tripleShotTimer > 0 ? 0.28 : 0.38;
+  fighter.shootCooldown = fighter.tripleShotTimer > 0 ? 0.26 : 0.36;
   soundFX.playLaser(isEcho);
 
   if (fighter.tripleShotTimer > 0) {
-    [-0.18, 0, 0.18].forEach((offset) => {
+    [-0.2, 0, 0.2].forEach((offset) => {
       fireProjectile(fighter.team, fighter.x, fighter.z, fighter.angle + offset, 0xfbbf24, isEcho);
     });
   } else {
@@ -653,19 +1063,19 @@ function triggerShoot(fighter, isEcho = false) {
 
 function triggerDash(fighter) {
   if (fighter.dashCooldown > 0) return false;
-  fighter.dashCooldown = 2.2;
+  fighter.dashCooldown = 2.0;
   fighter.dashActiveTimer = 0.65;
   soundFX.playDash();
-  spawnShockwave(fighter.x, fighter.z, 0xfacc15, 3.5);
+  spawnShockwave(fighter.x, fighter.z, 0xfacc15, 3.8);
 
-  const dashSpeed = 19;
+  const dashSpeed = 20;
   fighter.vx = Math.cos(fighter.angle) * dashSpeed;
   fighter.vz = Math.sin(fighter.angle) * dashSpeed;
   return true;
 }
 
 // =========================================================================
-// 8. TIME-LOOP REWIND & HOLOGRAPHIC CLONE SPAWNER
+// 8. TIME-LOOP REWIND & HOLOGRAPHIC CLONES SPAWNER
 // =========================================================================
 function showBanner(text, icon = '⚡') {
   const banner = document.getElementById('live-banner');
@@ -691,7 +1101,9 @@ function triggerTimeRewindCycle() {
   soundFX.playTimeRewind();
   gameState.cycleCount += 1;
   gameState.loopTimer = gameState.loopDuration;
-  gameState.shakeIntensity = 0.4;
+  gameState.shakeIntensity = 0.45;
+  soundFX.inTensionMode = false;
+  soundFX.lastBeepSecond = -1;
 
   const overlay = document.getElementById('rewind-overlay');
   if (overlay) {
@@ -718,6 +1130,7 @@ function triggerTimeRewindCycle() {
   activeEchoClones.forEach((c) => scene.remove(c.mesh));
   activeEchoClones = [];
 
+  // Spawn Destructible Clones (30 HP each!)
   p1.pastRecordings.forEach((rec) => {
     const mesh = createCyberFighterMesh(0x38bdf8, true, false);
     scene.add(mesh);
@@ -726,7 +1139,9 @@ function triggerTimeRewindCycle() {
       color: 0x38bdf8,
       recording: rec,
       frameIndex: 0,
-      mesh
+      mesh,
+      hp: 30,
+      maxHp: 30
     });
   });
 
@@ -738,25 +1153,28 @@ function triggerTimeRewindCycle() {
       color: 0xfb7185,
       recording: rec,
       frameIndex: 0,
-      mesh
+      mesh,
+      hp: 30,
+      maxHp: 30
     });
   });
 
   spawnShockwave(p1.x, p1.z, 0x22d3ee, 5.5);
   spawnShockwave(p2.x, p2.z, 0xf43f5e, 5.5);
 
-  showBanner(`⏪ BOUCLE TEMPORELLE : UN CLONE BLEU ALLIÉ VIENT D'APPARAÎTRE !`, '⏪');
-  setCoachText(`✨ <span class="text-cyan-300">SUPER !</span> Tu as maintenant <strong>${p1.pastRecordings.length} clone(s) bleu(s)</strong> qui rejouent tes tirs passés pour t'aider à vaincre le vaisseau rouge !`);
+  showBanner(`⏪ BOUCLE TEMPORELLE C${gameState.cycleCount} : NOUVEAUX CLONES ACTIFS !`, '⏪');
+  setCoachText(`✨ <span class="text-cyan-300">CLONES OPÉRATIONNELS !</span> Tu as <strong>${p1.pastRecordings.length} clone(s) bleu(s)</strong> qui tirent avec toi. <em>Astuce : tire sur les clones rouges ou dashe à travers pour les détruire !</em>`);
   updateHUD();
 }
 
 // =========================================================================
-// 9. INTELLIGENT BOT AI (Balanced for Fun & Playability)
+// 9. INTELLIGENT BOT AI
 // =========================================================================
 function updateBotAI(dt) {
   let moveX = 0;
   let moveZ = 0;
 
+  // 1. Detect Nearest Incoming Projectile
   let dangerProj = null;
   let minDist = 6.0;
   for (const proj of projectiles) {
@@ -771,30 +1189,39 @@ function updateBotAI(dt) {
     }
   }
 
+  // 2. Dodge Projectiles or Move Tactically
   if (dangerProj && gameState.botDifficulty !== 'easy') {
     const perpX = -dangerProj.vz;
     const perpZ = dangerProj.vx;
     const len = Math.hypot(perpX, perpZ) || 1;
-    moveX += (perpX / len) * 1.3;
-    moveZ += (perpZ / len) * 1.3;
+    moveX += (perpX / len) * 1.35;
+    moveZ += (perpZ / len) * 1.35;
 
     if (minDist < 3.2 && p2.dashCooldown <= 0 && gameState.botDifficulty === 'hard') {
       triggerDash(p2);
     }
   } else {
-    const dx = p1.x - p2.x;
-    const dz = p1.z - p2.z;
-    const dist = Math.hypot(dx, dz) || 1;
-    const desiredDist = 10.5;
-    const radialFactor = (dist - desiredDist) * 0.22;
-    const orbitDir = Math.sin(performance.now() * 0.001) > 0 ? 1 : -1;
+    // If power-up is active, bot might try to grab it!
+    if (powerupState.active && gameState.botDifficulty !== 'easy' && Math.hypot(p2.x, p2.z) > 4) {
+      moveX += -p2.x * 0.4;
+      moveZ += -p2.z * 0.4;
+    } else {
+      const dx = p1.x - p2.x;
+      const dz = p1.z - p2.z;
+      const dist = Math.hypot(dx, dz) || 1;
+      const desiredDist = 10.5;
+      const radialFactor = (dist - desiredDist) * 0.22;
+      const orbitDir = Math.sin(performance.now() * 0.001) > 0 ? 1 : -1;
 
-    moveX += (dx / dist) * radialFactor - (dz / dist) * orbitDir * 0.75;
-    moveZ += (dz / dist) * radialFactor + (dx / dist) * orbitDir * 0.75;
+      moveX += (dx / dist) * radialFactor - (dz / dist) * orbitDir * 0.75;
+      moveZ += (dz / dist) * radialFactor + (dx / dist) * orbitDir * 0.75;
+    }
   }
 
   const mag = Math.hypot(moveX, moveZ);
-  const speedMult = gameState.botDifficulty === 'hard' ? 9.8 : gameState.botDifficulty === 'medium' ? 7.6 : 5.4;
+  let speedMult = gameState.botDifficulty === 'hard' ? 10.0 : gameState.botDifficulty === 'medium' ? 7.6 : 5.4;
+  if (p2.freezeTimer > 0) speedMult *= 0.35; // Slow-mo freeze effect
+
   if (mag > 0.01) {
     p2.vx = (moveX / mag) * speedMult;
     p2.vz = (moveZ / mag) * speedMult;
@@ -805,7 +1232,6 @@ function updateBotAI(dt) {
   const targetZ = p1.z + p1.vz * leadFactor;
   p2.angle = Math.atan2(targetZ - p2.z, targetX - p2.x);
 
-  // Bot shoots less frequently on Easy so new players can comfortably learn and win
   const shootChance = gameState.botDifficulty === 'hard' ? 0.85 : gameState.botDifficulty === 'medium' ? 0.55 : 0.24;
   if (p2.shootCooldown <= 0 && Math.random() < shootChance * dt * 8) {
     triggerShoot(p2, false);
@@ -813,7 +1239,7 @@ function updateBotAI(dt) {
 }
 
 // =========================================================================
-// 10. PHYSICS, COLLISIONS & ROUND MANAGEMENT
+// 10. PHYSICS, COLLISIONS, POWER-UPS & COMBAT RESOLUTION
 // =========================================================================
 function constrainToArenaAndObstacles(fighter) {
   for (const obs of obstacles) {
@@ -839,6 +1265,8 @@ function updateFighter(fighter, dt, didShootThisFrame) {
   if (fighter.dashCooldown > 0) fighter.dashCooldown = Math.max(0, fighter.dashCooldown - dt);
   if (fighter.dashActiveTimer > 0) fighter.dashActiveTimer = Math.max(0, fighter.dashActiveTimer - dt);
   if (fighter.tripleShotTimer > 0) fighter.tripleShotTimer = Math.max(0, fighter.tripleShotTimer - dt);
+  if (fighter.empShieldTimer > 0) fighter.empShieldTimer = Math.max(0, fighter.empShieldTimer - dt);
+  if (fighter.freezeTimer > 0) fighter.freezeTimer = Math.max(0, fighter.freezeTimer - dt);
 
   fighter.x += fighter.vx * dt;
   fighter.z += fighter.vz * dt;
@@ -849,8 +1277,50 @@ function updateFighter(fighter, dt, didShootThisFrame) {
 
   fighter.mesh.position.set(fighter.x, 0, fighter.z);
   fighter.mesh.rotation.y = -fighter.angle + Math.PI / 2;
-  fighter.mesh.userData.shieldMat.opacity = fighter.dashActiveTimer > 0 ? 0.7 : 0.0;
+
+  // Shield visibility (Dash or EMP Reflective Shield)
+  const isShielded = fighter.dashActiveTimer > 0 || fighter.empShieldTimer > 0;
+  fighter.mesh.userData.shieldMat.opacity = isShielded ? 0.75 : 0.0;
+  if (fighter.empShieldTimer > 0) {
+    fighter.mesh.userData.shieldMat.color.setHex(0x22d3ee);
+  } else {
+    fighter.mesh.userData.shieldMat.color.setHex(0xfacc15);
+  }
   fighter.mesh.userData.shield.rotation.y += dt * 4;
+
+  // Emit thruster particles when moving
+  const speed = Math.hypot(fighter.vx, fighter.vz);
+  if (speed > 1.2) {
+    emitThrusterParticle(fighter.x, fighter.z, fighter.angle, fighter.color, fighter.dashActiveTimer > 0);
+  }
+
+  // Paradox Dash Strike: Dashing through enemy clones shatters them!
+  if (fighter.dashActiveTimer > 0) {
+    for (let c = activeEchoClones.length - 1; c >= 0; c--) {
+      const clone = activeEchoClones[c];
+      if (clone.team !== fighter.team) {
+        const dist = Math.hypot(fighter.x - clone.mesh.position.x, fighter.z - clone.mesh.position.z);
+        if (dist < 2.2) {
+          // SHATTER!
+          scene.remove(clone.mesh);
+          activeEchoClones.splice(c, 1);
+          spawnExplosion(clone.mesh.position.x, 0.9, clone.mesh.position.z, clone.color, 24);
+          spawnShockwave(clone.mesh.position.x, clone.mesh.position.z, 0xfacc15, 4.2);
+          soundFX.playCloneDestroy();
+          gameState.shakeIntensity = 0.55;
+          gameState.slowMoFactor = 0.2;
+          setTimeout(() => { gameState.slowMoFactor = 1.0; }, 120);
+
+          spawnDamageNumber(clone.mesh.position.x, 1.8, clone.mesh.position.z, '💥 PARADOX SHATTER!', '#facc15', true);
+          showBanner('💥 COLLISION DE PARADOXE : CLONE ENNEMI DÉTRUIT EN DASH !', '💥');
+          if (fighter.team === 1) {
+            PlayerStats.clonesDestroyed = (PlayerStats.clonesDestroyed || 0) + 1;
+            PlayerStats.save();
+          }
+        }
+      }
+    }
+  }
 
   fighter.currentRecording.push({
     x: fighter.x,
@@ -896,6 +1366,8 @@ function resetRoundPositions(keepScores = true) {
   p1.dashCooldown = 0;
   p1.dashActiveTimer = 0;
   p1.tripleShotTimer = 0;
+  p1.empShieldTimer = 0;
+  p1.freezeTimer = 0;
   p1.currentRecording = [];
   p1.pastRecordings = [];
 
@@ -909,6 +1381,8 @@ function resetRoundPositions(keepScores = true) {
   p2.dashCooldown = 0;
   p2.dashActiveTimer = 0;
   p2.tripleShotTimer = 0;
+  p2.empShieldTimer = 0;
+  p2.freezeTimer = 0;
   p2.currentRecording = [];
   p2.pastRecordings = [];
 
@@ -921,8 +1395,12 @@ function resetRoundPositions(keepScores = true) {
   gameState.loopTimer = gameState.loopDuration;
   gameState.cycleCount = 1;
   gameState.slowMoFactor = 1.0;
-  chronoCoreActive = true;
-  chronoCoreGroup.visible = true;
+  soundFX.inTensionMode = false;
+  soundFX.lastBeepSecond = -1;
+
+  powerupState.active = true;
+  powerupGroup.visible = true;
+  setPowerupType('chrono_core');
 
   if (!keepScores) {
     gameState.scores.p1 = 0;
@@ -950,7 +1428,7 @@ function handleRoundWin(winnerTeam) {
     }, 700);
   } else {
     showBanner(
-      winnerTeam === 1 ? '🏆 MANCHE GAGNÉE PAR TOI (BLEU) ! ENCORE 1 POUR LA VICTOIRE !' : `⚠️ MANCHE PERDUE ! PRÉPARE LA REVANCHE !`,
+      winnerTeam === 1 ? '🏆 MANCHE GAGNÉE ! ENCORE 1 POUR LA VICTOIRE FINALE !' : '⚠️ MANCHE PERDUE ! PRÉPARE LA REVANCHE !',
       '🏆'
     );
     setTimeout(() => {
@@ -962,6 +1440,7 @@ function handleRoundWin(winnerTeam) {
 function endMatch(winnerTeam) {
   gameState.running = false;
   gameState.slowMoFactor = 1.0;
+  soundFX.stopBGM();
 
   document.getElementById('marker-p1').classList.add('hidden');
   document.getElementById('marker-p2').classList.add('hidden');
@@ -980,13 +1459,13 @@ function endMatch(winnerTeam) {
   const hitsEl = document.getElementById('gameover-hits');
 
   if (winnerTeam === 1) {
-    title.textContent = '🎉 VICTOIRE ! TU AS GAGNÉ !';
+    title.textContent = '🎉 VICTOIRE ÉCLATANTE !';
     title.className = 'font-cyber text-2xl sm:text-3xl font-black text-white neon-text-cyan';
-    sub.textContent = 'Bravo ! Tes déplacements et tes clones temporels ont écrasé l\'adversaire.';
+    sub.textContent = 'Tes esquives millimétrées et tes clones ont triomphé du duel temporel.';
   } else {
     title.textContent = '💥 DÉFAITE... REJOUE !';
     title.className = 'font-cyber text-2xl sm:text-3xl font-black text-white neon-text-pink';
-    sub.textContent = 'Astuce : Ramasse le diamant jaune au milieu et utilise le bouton BOUCLIER DASH !';
+    sub.textContent = 'Astuce : Utilise le DASH pour détruire les clones ennemis et ramasse les power-ups au centre !';
   }
 
   scoreEl.textContent = `${gameState.scores.p1} - ${gameState.scores.p2}`;
@@ -998,7 +1477,7 @@ function endMatch(winnerTeam) {
 }
 
 // =========================================================================
-// 11. ONLINE P2P MULTIPLAYER (PeerJS WebRTC for Global Play on Vercel)
+// 11. ONLINE P2P MULTIPLAYER & VIRAL JOIN LINK (PeerJS WebRTC)
 // =========================================================================
 let peerInstance = null;
 let activeConn = null;
@@ -1012,7 +1491,9 @@ function initPeerMultiplayer() {
   try {
     peerInstance = new Peer(myShortCode);
     peerInstance.on('open', (id) => {
+      myShortCode = id;
       if (codeEl) codeEl.textContent = id;
+      checkUrlJoinParams();
     });
     peerInstance.on('connection', (conn) => {
       activeConn = conn;
@@ -1037,6 +1518,20 @@ function setupPeerConnection() {
   });
 }
 
+function checkUrlJoinParams() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('join') || params.get('room');
+  if (code && code.trim()) {
+    const cleanCode = code.trim().toUpperCase();
+    const input = document.getElementById('input-join-code');
+    if (input) input.value = cleanCode;
+    showToast(`Connexion automatique au salon ${cleanCode}...`);
+    setTimeout(() => {
+      document.getElementById('btn-join-online').click();
+    }, 800);
+  }
+}
+
 // =========================================================================
 // 12. MAIN GAME LOOP (60 FPS Animation & 3D Camera Controller)
 // =========================================================================
@@ -1054,48 +1549,98 @@ function animate(now) {
   orbitalRing2.rotation.z -= rawDt * 0.22;
   starField.rotation.y += rawDt * 0.03;
 
-  if (chronoCoreActive) {
-    chronoCoreGroup.rotation.y += rawDt * 2.2;
-    chronoCoreGroup.position.y = 1.35 + Math.sin(now * 0.004) * 0.28;
+  if (powerupState.active) {
+    powerupGroup.rotation.y += rawDt * 2.2;
+    powerupGroup.position.y = 1.35 + Math.sin(now * 0.004) * 0.28;
   }
 
   if (clickTargetMesh.material.opacity > 0) {
     clickTargetMesh.material.opacity = Math.max(0, clickTargetMesh.material.opacity - rawDt * 1.4);
   }
 
+  // --- GAMEPAD API POLLING ---
+  let gpMoveX = 0;
+  let gpMoveZ = 0;
+  let gpShot = false;
+  let gpDash = false;
+  if (navigator.getGamepads) {
+    const gamepads = navigator.getGamepads();
+    const gp = gamepads[0] || gamepads[1];
+    const badge = document.getElementById('gamepad-badge');
+    if (gp && gp.connected) {
+      if (badge) badge.classList.remove('hidden');
+      const deadzone = 0.16;
+      if (Math.abs(gp.axes[0]) > deadzone) gpMoveX = gp.axes[0];
+      if (Math.abs(gp.axes[1]) > deadzone) gpMoveZ = gp.axes[1];
+
+      // Right Stick for manual aim
+      if (gameState.aimMode === 'manual') {
+        const rx = gp.axes[2];
+        const rz = gp.axes[3];
+        if (Math.hypot(rx, rz) > deadzone) {
+          p1.angle = Math.atan2(rz, rx);
+        }
+      }
+
+      if (gp.buttons[0]?.pressed || gp.buttons[7]?.pressed) gpShot = true;
+      if (gp.buttons[1]?.pressed || gp.buttons[4]?.pressed || gp.buttons[5]?.pressed) gpDash = true;
+      if (gp.buttons[9]?.pressed && !gpPrevStartPressed) togglePause();
+      gpPrevStartPressed = !!gp.buttons[9]?.pressed;
+    } else if (badge) {
+      badge.classList.add('hidden');
+    }
+  }
+
   if (gameState.running && !gameState.paused) {
-    // 1. Update Time-Loop Countdown
+    // 1. Update Time-Loop Countdown & Tension Music
     gameState.loopTimer -= dt;
     const timerEl = document.getElementById('hud-loop-timer');
     if (timerEl) {
       timerEl.textContent = `${Math.max(0, gameState.loopTimer).toFixed(1)}s`;
     }
+
+    // Audio tension in the last 3.5 seconds
+    if (gameState.loopTimer <= 3.5) {
+      soundFX.inTensionMode = true;
+      const intSec = Math.ceil(gameState.loopTimer);
+      if (intSec >= 1 && intSec <= 3 && intSec !== soundFX.lastBeepSecond) {
+        soundFX.lastBeepSecond = intSec;
+        soundFX.playCountdownBeep(intSec);
+      }
+    } else {
+      soundFX.inTensionMode = false;
+    }
+
     if (gameState.loopTimer <= 0) {
       triggerTimeRewindCycle();
     }
 
-    // 2. Player 1 Input: Supports WASD + ZQSD + Arrow Keys (in Solo/Online) + Mouse Click Target + On-screen D-Pad!
-    let p1MoveX = 0;
-    let p1MoveZ = 0;
+    // 2. Player 1 Movement Input
+    let p1MoveX = gpMoveX + touchJoystickVec.x;
+    let p1MoveZ = gpMoveZ + touchJoystickVec.z;
     const allowArrowsForP1 = gameState.mode !== 'local';
 
-    const upPressed = keys['KeyW'] || keys['KeyZ'] || touchDir.up || (allowArrowsForP1 && keys['ArrowUp']);
-    const downPressed = keys['KeyS'] || touchDir.down || (allowArrowsForP1 && keys['ArrowDown']);
-    const leftPressed = keys['KeyA'] || keys['KeyQ'] || touchDir.left || (allowArrowsForP1 && keys['ArrowLeft']);
-    const rightPressed = keys['KeyD'] || touchDir.right || (allowArrowsForP1 && keys['ArrowRight']);
+    const upPressed = keys['KeyW'] || keys['KeyZ'] || (allowArrowsForP1 && keys['ArrowUp']);
+    const downPressed = keys['KeyS'] || (allowArrowsForP1 && keys['ArrowDown']);
+    const leftPressed = keys['KeyA'] || keys['KeyQ'] || (allowArrowsForP1 && keys['ArrowLeft']);
+    const rightPressed = keys['KeyD'] || (allowArrowsForP1 && keys['ArrowRight']);
 
     if (upPressed) p1MoveZ -= 1;
     if (downPressed) p1MoveZ += 1;
     if (leftPressed) p1MoveX -= 1;
     if (rightPressed) p1MoveX += 1;
 
-    // Visual feedback on D-Pad buttons when keys are pressed
-    document.getElementById('dpad-up').style.borderColor = upPressed ? '#22d3ee' : '';
-    document.getElementById('dpad-down').style.borderColor = downPressed ? '#22d3ee' : '';
-    document.getElementById('dpad-left').style.borderColor = leftPressed ? '#22d3ee' : '';
-    document.getElementById('dpad-right').style.borderColor = rightPressed ? '#22d3ee' : '';
+    // Visual feedback on D-Pad buttons
+    const dUp = document.getElementById('dpad-up');
+    const dDown = document.getElementById('dpad-down');
+    const dLeft = document.getElementById('dpad-left');
+    const dRight = document.getElementById('dpad-right');
+    if (dUp) dUp.style.borderColor = upPressed ? '#22d3ee' : '';
+    if (dDown) dDown.style.borderColor = downPressed ? '#22d3ee' : '';
+    if (dLeft) dLeft.style.borderColor = leftPressed ? '#22d3ee' : '';
+    if (dRight) dRight.style.borderColor = rightPressed ? '#22d3ee' : '';
 
-    // If no keyboard pressed, check if player clicked a point on the 3D Arena
+    // If no direct key/stick, move toward mouse click target on floor
     if (p1MoveX === 0 && p1MoveZ === 0 && p1.targetX !== null && p1.targetZ !== null) {
       const dx = p1.targetX - p1.x;
       const dz = p1.targetZ - p1.z;
@@ -1111,23 +1656,28 @@ function animate(now) {
 
     const p1Mag = Math.hypot(p1MoveX, p1MoveZ);
     if (p1Mag > 0.01 && p1.dashActiveTimer <= 0.25) {
-      const speed = 11.2;
+      let speed = 11.2;
+      if (p1.freezeTimer > 0) speed *= 0.35;
       p1.vx = (p1MoveX / p1Mag) * speed;
       p1.vz = (p1MoveZ / p1Mag) * speed;
     }
 
-    // Always aim P1 directly at P2 so shots hit reliably!
-    p1.angle = Math.atan2(p2.z - p1.z, p2.x - p1.x);
+    // AIMING: Auto-Aim (Opponent lock) or Free-Aim (Mouse position)
+    if (gameState.aimMode === 'manual') {
+      p1.angle = Math.atan2(mouseWorldPoint.z - p1.z, mouseWorldPoint.x - p1.x);
+    } else {
+      p1.angle = Math.atan2(p2.z - p1.z, p2.x - p1.x);
+    }
 
     let p1Shot = false;
-    if (keys['Space'] || gameState.autoFire) {
+    if (keys['Space'] || gpShot || gameState.autoFire) {
       p1Shot = triggerShoot(p1, false);
     }
-    if (keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyE']) {
+    if (keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyE'] || gpDash) {
       triggerDash(p1);
     }
 
-    // 3. Player 2 Input (Local 2P or Bot AI or Online Sync)
+    // 3. Player 2 Input
     let p2Shot = false;
     if (gameState.mode === 'local') {
       let p2MoveX = 0;
@@ -1139,7 +1689,8 @@ function animate(now) {
 
       const p2Mag = Math.hypot(p2MoveX, p2MoveZ);
       if (p2Mag > 0.01 && p2.dashActiveTimer <= 0.25) {
-        const speed = 11.2;
+        let speed = 11.2;
+        if (p2.freezeTimer > 0) speed *= 0.35;
         p2.vx = (p2MoveX / p2Mag) * speed;
         p2.vz = (p2MoveZ / p2Mag) * speed;
       }
@@ -1157,7 +1708,7 @@ function animate(now) {
       p2Shot = prevCooldown <= 0 && p2.shootCooldown > 0;
     }
 
-    // Broadcast P1 state if connected via P2P WebRTC
+    // Broadcast P1 state over WebRTC
     if (gameState.mode === 'online' && activeConn && activeConn.open) {
       activeConn.send({
         type: 'state',
@@ -1188,31 +1739,40 @@ function animate(now) {
       clone.frameIndex = (clone.frameIndex + 1) % clone.recording.length;
     }
 
-    // 6. Central Chrono Core Power-up Pickup
-    if (chronoCoreActive) {
+    // 6. Power-up Collection
+    if (powerupState.active) {
       [p1, p2].forEach((fighter) => {
         if (Math.hypot(fighter.x, fighter.z) < 2.1) {
-          chronoCoreActive = false;
-          chronoCoreGroup.visible = false;
-          chronoCoreRespawnTimer = 11.0;
-          fighter.tripleShotTimer = 6.5;
-          fighter.hp = Math.min(100, fighter.hp + 30);
-          spawnShockwave(0, 0, 0xfbbf24, 6.0);
-          soundFX.playDash();
-          showBanner(
-            fighter.team === 1
-              ? '💎 TU AS CAPTURÉ LE DIAMANT : TRIPLE TIR + SOIN ACTIVÉ !'
-              : '⚠️ L\'ENNEMI A PRIS LE DIAMANT CENTRAL !',
-            '💎'
-          );
+          powerupState.active = false;
+          powerupGroup.visible = false;
+          powerupState.respawnTimer = 11.5;
+          soundFX.playPowerup();
+
+          if (powerupState.type === 'chrono_core') {
+            fighter.tripleShotTimer = 7.0;
+            fighter.hp = Math.min(100, fighter.hp + 30);
+            spawnShockwave(0, 0, 0xfbbf24, 6.0);
+            showBanner(fighter.team === 1 ? '💎 DIAMANT CAPTURÉ : TRIPLE TIR + SOIN (+30 HP) !' : '⚠️ L\'ENNEMI A PRIS LE DIAMANT CENTRAL !', '💎');
+          } else if (powerupState.type === 'emp_shield') {
+            fighter.empShieldTimer = 4.5;
+            spawnShockwave(0, 0, 0x22d3ee, 6.0);
+            showBanner(fighter.team === 1 ? '🛡️ BOUCLIER EMP RÉFLECTEUR ACTIVÉ (4.5s) !' : '⚠️ L\'ENNEMI A ACTIVÉ UN BOUCLIER RÉFLECTEUR !', '🛡️');
+          } else if (powerupState.type === 'time_warp') {
+            const enemy = fighter.team === 1 ? p2 : p1;
+            enemy.freezeTimer = 2.5;
+            spawnShockwave(0, 0, 0xa855f7, 7.0);
+            showBanner(fighter.team === 1 ? '⚡ DISTORSION TEMPORELLE : ENNEMI RALENTI DE 65% !' : '⚠️ TU AS ÉTÉ TOUCHÉ PAR LA DISTORSION TEMPORELLE !', '⚡');
+          }
           updateHUD();
         }
       });
     } else {
-      chronoCoreRespawnTimer -= dt;
-      if (chronoCoreRespawnTimer <= 0) {
-        chronoCoreActive = true;
-        chronoCoreGroup.visible = true;
+      powerupState.respawnTimer -= dt;
+      if (powerupState.respawnTimer <= 0) {
+        powerupState.active = true;
+        powerupGroup.visible = true;
+        powerupState.typeIndex = (powerupState.typeIndex + 1) % powerupState.types.length;
+        setPowerupType(powerupState.types[powerupState.typeIndex]);
         spawnShockwave(0, 0, 0xfbbf24, 4.0);
       }
     }
@@ -1227,6 +1787,7 @@ function animate(now) {
 
       let removeProj = pr.life <= 0;
 
+      // Pillar Obstacle Bounces
       for (const obs of obstacles) {
         const dx = pr.x - obs.x;
         const dz = pr.z - obs.z;
@@ -1248,6 +1809,7 @@ function animate(now) {
         }
       }
 
+      // Arena Perimeter Bounces
       const r = Math.hypot(pr.x, pr.z);
       if (r > ARENA_RADIUS - 0.4) {
         if (pr.bouncesLeft > 0) {
@@ -1264,27 +1826,69 @@ function animate(now) {
         }
       }
 
-      // Check Hit against P1 or P2
+      // Check Hits against Enemy Fighters (P1 or P2)
       const target = pr.team === 1 ? p2 : p1;
       if (!removeProj && Math.hypot(pr.x - target.x, pr.z - target.z) < 1.35) {
-        removeProj = true;
-        if (target.dashActiveTimer > 0) {
+        // EMP Reflective Shield active: Reflect projectile back at sender!
+        if (target.empShieldTimer > 0) {
+          pr.vx = -pr.vx * 1.15;
+          pr.vz = -pr.vz * 1.15;
+          pr.team = target.team;
+          pr.color = target.color;
+          pr.mesh.rotation.y = -Math.atan2(pr.vz, pr.vx);
+          soundFX.playReflect();
+          spawnShockwave(target.x, target.z, 0x22d3ee, 2.5);
+          spawnDamageNumber(target.x, 1.8, target.z, '⚡ RENVOI !', '#22d3ee');
+        } else if (target.dashActiveTimer > 0) {
+          removeProj = true;
           spawnShockwave(target.x, target.z, 0xfacc15, 2.8);
           soundFX.playDash();
         } else {
-          // Give P1 slightly stronger shots on Easy mode for instant gratification
-          const dmg = pr.team === 1
-            ? (pr.isEcho ? 14 : 18)
-            : (gameState.botDifficulty === 'easy' ? 8 : 15);
+          removeProj = true;
+          const dmg = pr.team === 1 ? (pr.isEcho ? 14 : 18) : (gameState.botDifficulty === 'easy' ? 8 : 15);
           target.hp = Math.max(0, target.hp - dmg);
           if (pr.team === 1) gameState.totalPlayerHits += 1;
           soundFX.playHit();
-          gameState.shakeIntensity = 0.3;
+          gameState.shakeIntensity = 0.35;
           spawnExplosion(target.x, 1.0, target.z, target.color, 16);
+          spawnDamageNumber(target.x, 1.8, target.z, `-${dmg}`, target.team === 1 ? '#38bdf8' : '#f43f5e');
           updateHUD();
 
           if (target.hp <= 0) {
             handleRoundWin(pr.team);
+          }
+        }
+      }
+
+      // Check Hits against Destructible Echo Clones!
+      if (!removeProj) {
+        for (let c = activeEchoClones.length - 1; c >= 0; c--) {
+          const clone = activeEchoClones[c];
+          if (clone.team !== pr.team) {
+            const cdist = Math.hypot(pr.x - clone.mesh.position.x, pr.z - clone.mesh.position.z);
+            if (cdist < 1.35) {
+              removeProj = true;
+              const dmg = pr.isEcho ? 12 : 18;
+              clone.hp -= dmg;
+              spawnExplosion(clone.mesh.position.x, 0.9, clone.mesh.position.z, clone.color, 8);
+              spawnDamageNumber(clone.mesh.position.x, 1.8, clone.mesh.position.z, `-${dmg}`, '#c084fc');
+              soundFX.playHit();
+
+              if (clone.hp <= 0) {
+                // Shatter clone!
+                scene.remove(clone.mesh);
+                activeEchoClones.splice(c, 1);
+                spawnExplosion(clone.mesh.position.x, 0.9, clone.mesh.position.z, clone.color, 24);
+                spawnShockwave(clone.mesh.position.x, clone.mesh.position.z, clone.color, 4.0);
+                soundFX.playCloneDestroy();
+                showBanner('⚡ PARADOXE : CLONE ENNEMI ÉLIMINÉ !', '⚡');
+                if (pr.team === 1) {
+                  PlayerStats.clonesDestroyed = (PlayerStats.clonesDestroyed || 0) + 1;
+                  PlayerStats.save();
+                }
+              }
+              break;
+            }
           }
         }
       }
@@ -1296,7 +1900,7 @@ function animate(now) {
     }
   }
 
-  // 8. Update Shockwaves & Particles
+  // 8. Update Shockwaves
   for (let i = shockwaves.length - 1; i >= 0; i--) {
     const sw = shockwaves[i];
     sw.scale += rawDt * 14;
@@ -1305,10 +1909,12 @@ function animate(now) {
     sw.mat.opacity = Math.max(0, sw.opacity);
     if (sw.opacity <= 0) {
       scene.remove(sw.mesh);
+      if (sw.mat && sw.mat.dispose) sw.mat.dispose();
       shockwaves.splice(i, 1);
     }
   }
 
+  // 9. Update Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const pt = particles[i];
     pt.life -= rawDt;
@@ -1323,7 +1929,42 @@ function animate(now) {
     }
   }
 
-  // 9. Dynamic 3D Camera Positioning + Screen Shake
+  // 10. Update Thruster Exhaust Particles
+  for (let i = thrusterParticles.length - 1; i >= 0; i--) {
+    const tp = thrusterParticles[i];
+    tp.life -= rawDt;
+    tp.mesh.position.x += tp.vx * rawDt;
+    tp.mesh.position.y += tp.vy * rawDt;
+    tp.mesh.position.z += tp.vz * rawDt;
+    tp.mat.opacity = Math.max(0, tp.life * 2.5);
+    if (tp.life <= 0) {
+      scene.remove(tp.mesh);
+      if (tp.mat && tp.mat.dispose) tp.mat.dispose();
+      thrusterParticles.splice(i, 1);
+    }
+  }
+
+  // 11. Update Floating Damage Numbers
+  for (let i = damageNumbers.length - 1; i >= 0; i--) {
+    const dn = damageNumbers[i];
+    dn.life -= rawDt;
+    dn.pos.y += dn.vy * rawDt;
+    const projVec = dn.pos.clone().project(camera);
+    if (projVec.z > 1) {
+      dn.el.style.opacity = '0';
+    } else {
+      const scrX = (projVec.x * 0.5 + 0.5) * window.innerWidth;
+      const scrY = (-(projVec.y * 0.5) + 0.5) * window.innerHeight;
+      dn.el.style.left = `${scrX}px`;
+      dn.el.style.top = `${scrY}px`;
+    }
+    if (dn.life <= 0) {
+      dn.el.remove();
+      damageNumbers.splice(i, 1);
+    }
+  }
+
+  // 12. Dynamic 3D Camera Positioning & Screen Shake
   let camTargetX = (p1.x + p2.x) * 0.22;
   let camTargetZ = (p1.z + p2.z) * 0.22;
 
@@ -1353,10 +1994,10 @@ function animate(now) {
 
   renderer.render(scene, camera);
 
-  // Update 2D Floating Labels Above 3D Ships!
+  // Update 2D Floating Labels
   updateFloatingMarker('marker-p1', p1.x, 2.7, p1.z);
   updateFloatingMarker('marker-p2', p2.x, 2.7, p2.z);
-  if (chronoCoreActive) {
+  if (powerupState.active) {
     updateFloatingMarker('marker-core', 0, 3.1, 0);
   } else {
     document.getElementById('marker-core').classList.add('hidden');
@@ -1371,11 +2012,12 @@ function showToast(msg) {
   if (!box) return;
   box.textContent = msg;
   box.classList.remove('hidden');
-  setTimeout(() => box.classList.add('hidden'), 2600);
+  setTimeout(() => box.classList.add('hidden'), 2800);
 }
 
 function startMatch(mode, opponentLabel) {
   soundFX.init();
+  soundFX.startBGM();
   window.focus();
   gameState.mode = mode;
   gameState.running = true;
@@ -1393,9 +2035,9 @@ function startMatch(mode, opponentLabel) {
   document.getElementById('ingame-controls-footer').classList.remove('hidden');
   document.getElementById('ingame-controls-footer').classList.add('flex');
 
-  setCoachText('🎯 <span class="text-cyan-300">OBJECTIF :</span> Bouge ton vaisseau <span class="text-cyan-300">BLEU</span> (Flèches, ZQSD, ou <strong>clique sur l\'arène</strong>). Il tire automatiquement sur l\'ennemi <span class="text-rose-400">ROUGE</span> !');
+  setCoachText('🎯 <span class="text-cyan-300">OBJECTIF :</span> Déplace ton vaisseau <span class="text-cyan-300">BLEU</span> (Flèches, ZQSD, Souris ou Joystick). Détruis les clones ennemis ou dashe à travers !');
   resetRoundPositions(false);
-  showBanner('C\'EST PARTI ! DÉPLACE-TOI POUR ESQUIVER ET RAMASSE LE DIAMANT JAUNE !', '🚀');
+  showBanner('C\'EST PARTI ! DÉPLACE-TOI POUR ESQUIVER ET DÉTRUIS LES CLONES ROUGES !', '🚀');
 }
 
 function togglePause() {
@@ -1408,7 +2050,7 @@ function togglePause() {
   showBanner(gameState.paused ? 'JEU EN PAUSE' : 'REPRISE DU DUEL TEMPOREL', '⏸');
 }
 
-// Bot Difficulty Selection
+// Bot Difficulty
 document.querySelectorAll('.bot-diff-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     gameState.botDifficulty = btn.getAttribute('data-diff');
@@ -1421,7 +2063,7 @@ document.querySelectorAll('.bot-diff-btn').forEach((btn) => {
 
 // Launch Modes
 document.getElementById('btn-start-bot').addEventListener('click', () => {
-  const diffLabel = gameState.botDifficulty === 'hard' ? '🔴 BOT PRO' : gameState.botDifficulty === 'medium' ? '🔴 BOT NORMAL' : '🔴 BOT FACILE';
+  const diffLabel = gameState.botDifficulty === 'hard' ? '🔴 BOT PARADOXE' : gameState.botDifficulty === 'medium' ? '🔴 BOT TACTICIEN' : '🔴 BOT INITIÉ';
   startMatch('bot', diffLabel);
 });
 
@@ -1468,24 +2110,31 @@ document.getElementById('btn-join-online').addEventListener('click', () => {
   }
 });
 
+// Copy Code Button
 document.getElementById('btn-copy-code').addEventListener('click', () => {
   const text = `${myShortCode}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).catch(() => {});
-  } else {
-    const temp = document.createElement('textarea');
-    temp.value = text;
-    document.body.appendChild(temp);
-    temp.select();
-    document.execCommand('copy');
-    document.body.removeChild(temp);
   }
-  showToast(`Code ${myShortCode} copié ! Envoie-le à ton ami.`);
+  showToast(`Code ${myShortCode} copié !`);
 });
 
-// Top Navigation Controls
+// Copy Direct Invitation Link Button (1-Click join)
+const btnDirectLink = document.getElementById('btn-copy-direct-link');
+if (btnDirectLink) {
+  btnDirectLink.addEventListener('click', () => {
+    const link = window.location.origin + window.location.pathname + '?join=' + myShortCode;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).catch(() => {});
+    }
+    showToast('🔗 Lien direct copié ! Envoie-le sur WhatsApp ou Discord pour lancer le duel en 1 clic !');
+  });
+}
+
+// Navigation & Header Controls
 document.getElementById('btn-home-menu').addEventListener('click', () => {
   gameState.running = false;
+  soundFX.stopBGM();
   document.getElementById('menu-overlay').classList.remove('hidden');
   document.getElementById('gameover-modal').classList.add('hidden');
   document.getElementById('gameover-modal').classList.remove('flex');
@@ -1513,9 +2162,16 @@ document.getElementById('btn-sound-toggle').addEventListener('click', () => {
   window.focus();
 });
 
+document.getElementById('btn-music-toggle').addEventListener('click', () => {
+  const isEnabled = soundFX.toggleBGM();
+  document.getElementById('music-label').textContent = isEnabled ? 'Musique ON' : 'Musique OFF';
+  showToast(isEnabled ? '🎵 Musique Synthwave activée' : '🔇 Musique Synthwave coupée');
+  window.focus();
+});
+
 document.getElementById('btn-pause-game').addEventListener('click', togglePause);
 
-// Rules Help Modal
+// Modals
 document.getElementById('btn-rules-help').addEventListener('click', () => {
   if (gameState.running && !gameState.paused) togglePause();
   const m = document.getElementById('rules-modal');
@@ -1537,7 +2193,6 @@ document.getElementById('btn-ok-rules').addEventListener('click', () => {
   window.focus();
 });
 
-// Gameover Modal Buttons
 document.getElementById('btn-rematch').addEventListener('click', () => {
   const oppName = document.getElementById('hud-p2-name').textContent;
   startMatch(gameState.mode, oppName);
@@ -1548,14 +2203,14 @@ document.getElementById('btn-back-lobby').addEventListener('click', () => {
 });
 
 document.getElementById('btn-share-score').addEventListener('click', () => {
-  const shareTxt = `🔥 Je viens de gagner sur ECHO-PARADOX 3D (${gameState.scores.p1}-${gameState.scores.p2}) avec ${activeEchoClones.length} clones temporels ! Viens me défier (Code: ${myShortCode})`;
+  const link = window.location.origin + window.location.pathname + '?join=' + myShortCode;
+  const shareTxt = `🔥 Je viens de gagner sur ECHO-PARADOX 3D (${gameState.scores.p1}-${gameState.scores.p2}) ! Rejoins mon salon en 1 clic : ${link}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(shareTxt).catch(() => {});
   }
-  showToast('Message de défi copié pour WhatsApp / TikTok / Discord !');
+  showToast('Message de défi copié pour WhatsApp / Discord !');
 });
 
-// Vercel Guide Modal
 document.getElementById('btn-vercel-modal').addEventListener('click', () => {
   const m = document.getElementById('vercel-modal');
   m.classList.remove('hidden');
@@ -1583,5 +2238,6 @@ window.addEventListener('resize', () => {
 window.onload = () => {
   PlayerStats.load();
   initPeerMultiplayer();
+  initVirtualJoystick();
   requestAnimationFrame(animate);
 };
