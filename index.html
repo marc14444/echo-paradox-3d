@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ECHO-PARADOX 3D — Duel Temporel Holographique</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #030712;
+      font-family: 'Inter', sans-serif;
+      color: #f8fafc;
+    }
+    .font-cyber {
+      font-family: 'Orbitron', sans-serif;
+    }
+    #game-canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      cursor: crosshair;
+      background: radial-gradient(circle at center, #0a192f 0%, #020617 100%);
+    }
+    .hud-glass {
+      background: rgba(9, 14, 28, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      box-shadow: 0 0 25px rgba(14, 165, 233, 0.15), inset 0 0 15px rgba(56, 189, 248, 0.06);
+    }
+    .hud-glass-pink {
+      background: rgba(24, 9, 28, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      box-shadow: 0 0 25px rgba(244, 63, 94, 0.15), inset 0 0 15px rgba(244, 63, 94, 0.06);
+    }
+    .neon-text-cyan {
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8), 0 0 22px rgba(6, 182, 212, 0.5);
+    }
+    .neon-text-pink {
+      text-shadow: 0 0 10px rgba(244, 63, 94, 0.8), 0 0 22px rgba(225, 29, 72, 0.5);
+    }
+    .neon-btn-cyan {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(37, 99, 235, 0.45) 100%);
+      border: 1px solid rgba(34, 211, 238, 0.75);
+      box-shadow: 0 0 18px rgba(6, 182, 212, 0.3);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .neon-btn-cyan:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.55) 0%, rgba(37, 99, 235, 0.65) 100%);
+      border-color: #67e8f9;
+      box-shadow: 0 0 28px rgba(34, 211, 238, 0.55);
+      transform: translateY(-1px);
+    }
+    .neon-btn-pink {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.3) 0%, rgba(168, 85, 247, 0.4) 100%);
+      border: 1px solid rgba(244, 63, 94, 0.7);
+      box-shadow: 0 0 18px rgba(244, 63, 94, 0.25);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .neon-btn-pink:hover {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.5) 0%, rgba(168, 85, 247, 0.6) 100%);
+      border-color: #fda4af;
+      box-shadow: 0 0 28px rgba(244, 63, 94, 0.5);
+      transform: translateY(-1px);
+    }
+    .scanline-overlay {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0, 255, 255, 0.018) 50%, rgba(0, 255, 255, 0.018));
+      background-size: 100% 4px;
+    }
+    @keyframes pulseFlash {
+      0% { opacity: 0.85; }
+      100% { opacity: 0; }
+    }
+    .rewind-flash {
+      animation: pulseFlash 0.65s ease-out forwards;
+    }
+    .floating-tag {
+      position: fixed;
+      pointer-events: none;
+      z-index: 15;
+      transform: translate(-50%, -100%);
+      transition: opacity 0.15s;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.4);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="relative select-none" tabindex="0">
+
+  <!-- 3D WebGL Container -->
+  <div id="game-canvas-container"></div>
+
+  <!-- 3D Floating Player Markers (So the user ALWAYS sees who they are!) -->
+  <div id="marker-p1" class="floating-tag hidden">
+    <div class="flex flex-col items-center">
+      <div class="rounded-lg bg-cyan-500/90 px-2 py-0.5 text-[10px] font-black text-slate-950 shadow-lg border border-white whitespace-nowrap">
+        🔵 TOI (JOUEUR 1)
+      </div>
+      <div class="w-14 h-1.5 bg-slate-900 rounded-full overflow-hidden mt-0.5 border border-cyan-300">
+        <div id="marker-p1-hp" class="h-full bg-cyan-400" style="width: 100%"></div>
+      </div>
+      <div class="text-cyan-400 text-xs font-bold leading-none mt-0.5">▼</div>
+    </div>
+  </div>
+
+  <div id="marker-p2" class="floating-tag hidden">
+    <div class="flex flex-col items-center">
+      <div id="marker-p2-label" class="rounded-lg bg-rose-500/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg border border-rose-200 whitespace-nowrap">
+        🔴 ENNEMI (CIBLE)
+      </div>
+      <div class="w-14 h-1.5 bg-slate-900 rounded-full overflow-hidden mt-0.5 border border-rose-300">
+        <div id="marker-p2-hp" class="h-full bg-rose-500" style="width: 100%"></div>
+      </div>
+      <div class="text-rose-400 text-xs font-bold leading-none mt-0.5">▼</div>
+    </div>
+  </div>
+
+  <div id="marker-core" class="floating-tag hidden">
+    <div class="rounded-full bg-amber-400/90 px-2 py-0.5 text-[9px] font-black text-slate-950 shadow border border-white whitespace-nowrap animate-bounce">
+      💎 BONUS TRIPLE TIR + SOIN
+    </div>
+  </div>
+
+  <!-- Subtle AR Holographic Scanlines -->
+  <div class="scanline-overlay"></div>
+
+  <!-- Time-Loop Rewind Visual Flash Overlay -->
+  <div id="rewind-overlay" class="pointer-events-none fixed inset-0 z-20 hidden bg-cyan-400/30 backdrop-invert"></div>
+
+  <!-- TOP NAVIGATION / HUD BAR -->
+  <header class="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 pointer-events-none">
+    <!-- Brand & Camera Mode -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <button id="btn-home-menu" class="hud-glass flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold tracking-wider text-cyan-300 hover:border-cyan-400 transition">
+        <span class="inline-block h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span class="font-cyber">ECHO-PARADOX</span> <span class="hidden sm:inline-block rounded bg-cyan-500/20 px-1.5 py-0.5 text-[10px] text-cyan-200 border border-cyan-400/30">3D AR</span>
+      </button>
+
+      <button id="btn-camera-view" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-cyan-300 hover:border-cyan-400 transition" title="Changer l'angle de caméra 3D">
+        🎥 <span id="camera-label" class="hidden md:inline">Caméra: Immersive</span>
+      </button>
+
+      <button id="btn-rules-help" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-bold text-amber-300 border border-amber-400/40 hover:bg-amber-500/20 transition">
+        ❓ <span class="hidden sm:inline">Comment Jouer</span>
+      </button>
+    </div>
+
+    <!-- Center Match Score & Chrono Loop Counter (Visible during match) -->
+    <div id="hud-center-panel" class="hidden items-center gap-2 sm:gap-4 hud-glass rounded-2xl px-3 py-1.5 sm:px-5 sm:py-2 pointer-events-auto">
+      <!-- Player 1 (Cyan) -->
+      <div class="flex flex-col items-end">
+        <div class="flex items-center gap-1.5">
+          <span id="hud-p1-name" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-cyan-300">🔵 TOI</span>
+          <span id="hud-p1-clones" class="rounded bg-cyan-500/20 px-1.5 py-0.2 text-[10px] font-mono text-cyan-200 border border-cyan-400/30">0 Clone</span>
+        </div>
+        <div class="w-20 sm:w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden mt-1 border border-cyan-500/40">
+          <div id="hud-p1-hp" class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-150" style="width: 100%"></div>
+        </div>
+      </div>
+
+      <!-- Central Chrono Loop Ring -->
+      <div class="flex flex-col items-center px-2 border-x border-slate-700/70">
+        <div class="flex items-center gap-2 font-cyber text-sm sm:text-lg font-black">
+          <span id="hud-score-p1" class="text-cyan-400">0</span>
+          <span class="text-xs text-slate-400">MANCHES (2=GAGNÉ)</span>
+          <span id="hud-score-p2" class="text-rose-400">0</span>
+        </div>
+        <div class="flex items-center gap-1 text-[10px] sm:text-xs font-mono text-amber-300">
+          <span>⏱ PROCHAIN CLONE DANS :</span>
+          <span id="hud-loop-timer" class="font-bold text-white">10.0s</span>
+          <span id="hud-cycle-badge" class="rounded bg-amber-500/20 px-1 text-[10px] text-amber-200 border border-amber-400/30">C1</span>
+        </div>
+      </div>
+
+      <!-- Player 2 / Bot (Rose/Magenta) -->
+      <div class="flex flex-col items-start">
+        <div class="flex items-center gap-1.5">
+          <span id="hud-p2-clones" class="rounded bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-mono text-rose-200 border border-rose-400/30">0 Clone</span>
+          <span id="hud-p2-name" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-rose-400">🔴 BOT IA</span>
+        </div>
+        <div class="w-20 sm:w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden mt-1 border border-rose-500/40">
+          <div id="hud-p2-hp" class="h-full bg-gradient-to-r from-rose-500 to-fuchsia-500 transition-all duration-150" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Action Buttons: Sound, Pause, Vercel Guide -->
+    <div class="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+      <button id="btn-sound-toggle" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-cyan-300 hover:border-cyan-400 transition" title="Activer/Couper les effets sonores">
+        🔊 <span id="sound-label" class="hidden lg:inline">Son ON</span>
+      </button>
+      <button id="btn-pause-game" class="hidden hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:border-amber-400 transition">
+        ⏸ <span class="hidden sm:inline">Pause</span>
+      </button>
+      <button id="btn-vercel-modal" class="neon-btn-cyan rounded-xl px-2.5 py-1.5 text-xs font-bold text-white flex items-center gap-1">
+        ▲ <span class="hidden sm:inline">Vercel</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- LIVE OBJECTIVE COACH BAR (Always explains what is happening in simple French!) -->
+  <div id="coach-bar" class="hidden fixed top-14 sm:top-16 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-xl pointer-events-none">
+    <div class="hud-glass rounded-2xl px-3.5 py-2 text-center border border-cyan-400/40 shadow-lg">
+      <div id="coach-step-text" class="text-xs sm:text-sm font-bold text-white">
+        🎯 <span class="text-cyan-300">OBJECTIF :</span> Déplace ton vaisseau <span class="text-cyan-300">BLEU</span> (Flèches, ZQSD, ou clique sur l'arène) pour détruire le vaisseau <span class="text-rose-400">ROUGE</span> !
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE EVENT BANNER (Time Rewind Notification / Kill Feed) -->
+  <div id="live-banner" class="pointer-events-none fixed top-28 sm:top-32 left-1/2 -translate-x-1/2 z-20 transition-all duration-300 opacity-0 transform -translate-y-2">
+    <div id="live-banner-box" class="hud-glass rounded-full px-4 py-1.5 text-xs sm:text-sm font-cyber font-bold tracking-wider text-cyan-200 shadow-lg flex items-center gap-2">
+      <span id="live-banner-icon">⚡</span>
+      <span id="live-banner-text">SAUT TEMPOREL : CLONE ÉCHO CRÉÉ !</span>
+    </div>
+  </div>
+
+  <!-- MAIN MENU OVERLAY -->
+  <main id="menu-overlay" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-950/65 backdrop-blur-sm">
+    <div class="hud-glass w-full max-w-4xl rounded-3xl p-5 sm:p-7 border border-cyan-500/40 shadow-2xl my-auto">
+      <!-- Top Hero Header -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <div class="inline-flex items-center gap-2 rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-cyan-300 border border-cyan-400/30 mb-1.5">
+            <span>🎮 ULTRA FACILE À JOUER</span>
+            <span>•</span>
+            <span>CLAVIER, SOURIS OU TACTILE</span>
+          </div>
+          <h1 class="font-cyber text-2xl sm:text-4xl font-black tracking-tight text-white neon-text-cyan">
+            ECHO-PARADOX <span class="text-cyan-400">3D</span>
+          </h1>
+          <p class="mt-1 text-xs sm:text-sm text-slate-200 max-w-xl">
+            Tu contrôles le vaisseau <strong>BLEU</strong> et tu dois mettre les PV du vaisseau <strong>ROUGE</strong> à zéro. Toutes les <strong>10 secondes</strong>, un clone bleu allié apparaît et répète tes anciens tirs pour t'aider !
+          </p>
+        </div>
+
+        <!-- Global Player Stats Card -->
+        <div class="hud-glass rounded-2xl p-3 flex items-center gap-4 border border-slate-700/80 shrink-0">
+          <div class="text-center">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400">Victoires</div>
+            <div id="stat-wins" class="font-cyber text-xl font-black text-cyan-400">0</div>
+          </div>
+          <div class="h-8 w-px bg-slate-700"></div>
+          <div class="text-center">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400">Clones Créés</div>
+            <div id="stat-echoes" class="font-cyber text-xl font-black text-amber-400">0</div>
+          </div>
+          <div class="h-8 w-px bg-slate-700"></div>
+          <div class="text-center">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400">Rang Mondial</div>
+            <div id="stat-rank" class="font-cyber text-xs font-bold text-emerald-400">BRONZE I</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ULTRA SIMPLE 3-STEP VISUAL GUIDE -->
+      <div class="mt-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 p-3.5">
+        <div class="text-xs font-bold uppercase tracking-wider text-cyan-300 mb-2 flex items-center justify-between">
+          <span>📖 LES 3 RÈGLES DU JEU EN 10 SECONDES :</span>
+          <span class="text-[11px] text-emerald-300">✨ Tir Automatique Activé (tu as juste à bouger !)</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+          <div class="rounded-xl bg-slate-900/80 p-2.5 border border-slate-800">
+            <div class="font-bold text-cyan-300">1. Comment Bouger & Tirer ?</div>
+            <div class="text-slate-300 mt-0.5">
+              Utilise les <strong>Flèches (↑↓←→)</strong>, ou <strong>ZQSD</strong>, ou <strong>clique directement avec la souris</strong> sur l'arène ! Ton vaisseau vise et tire tout seul.
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-900/80 p-2.5 border border-slate-800">
+            <div class="font-bold text-amber-300">2. Le Pouvoir des 10 Secondes</div>
+            <div class="text-slate-300 mt-0.5">
+              Toutes les <strong>10s</strong>, un <strong>clone fantôme bleu</strong> apparaît et refait tous tes tirs passés. Tu auras jusqu'à 3 clones qui tirent avec toi !
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-900/80 p-2.5 border border-slate-800">
+            <div class="font-bold text-emerald-300">3. Comment Gagner ?</div>
+            <div class="text-slate-300 mt-0.5">
+              Ramasse le <strong>Diamant Jaune</strong> au centre (Triple Tir + Soin) et vide la barre de vie rouge <strong>2 fois</strong> pour remporter le match !
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Game Mode Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <!-- MODE 1: VS BOT IA -->
+        <div class="hud-glass rounded-2xl p-4 flex flex-col justify-between border-2 border-cyan-400/60 hover:border-cyan-300 transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="rounded-lg bg-cyan-500/20 px-2.5 py-1 text-xs font-bold text-cyan-300">🤖 SOLO VS BOT IA</span>
+              <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">RECOMMANDÉ</span>
+            </div>
+            <h2 class="font-cyber text-lg font-bold text-white mt-2.5">Jouer Contre le Bot</h2>
+            <p class="text-xs text-slate-300 mt-1">
+              Idéal pour commencer ! Déplace-toi au clavier ou à la souris, ton vaisseau tire automatiquement sur le Bot.
+            </p>
+            <!-- Bot Difficulty Selector -->
+            <div class="mt-3">
+              <label class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Difficulté du Bot :</label>
+              <div class="grid grid-cols-3 gap-1.5 mt-1.5">
+                <button data-diff="easy" class="bot-diff-btn rounded-lg py-1.5 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200">
+                  Initié
+                </button>
+                <button data-diff="medium" class="bot-diff-btn rounded-lg py-1.5 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300 hover:border-cyan-400">
+                  Tacticien
+                </button>
+                <button data-diff="hard" class="bot-diff-btn rounded-lg py-1.5 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300 hover:border-rose-400">
+                  Paradoxe
+                </button>
+              </div>
+            </div>
+          </div>
+          <button id="btn-start-bot" class="neon-btn-cyan w-full rounded-xl py-3 mt-4 font-cyber text-xs sm:text-sm font-black text-white shadow-lg">
+            ⚡ LANCER CONTRE LE BOT
+          </button>
+        </div>
+
+        <!-- MODE 2: 2 PLAYERS LOCAL -->
+        <div class="hud-glass-pink rounded-2xl p-4 flex flex-col justify-between border border-rose-500/30 hover:border-rose-400 transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="rounded-lg bg-rose-500/20 px-2.5 py-1 text-xs font-bold text-rose-300">⚔️ 2 JOUEURS LOCAL</span>
+              <span class="text-xs font-mono text-slate-400">Même Écran</span>
+            </div>
+            <h2 class="font-cyber text-lg font-bold text-white mt-2.5">Duel à 2 sur le Clavier</h2>
+            <p class="text-xs text-slate-300 mt-1">
+              Affronte un ami sur le même ordinateur ! Les deux vaisseaux visent automatiquement, concentrez-vous sur l'esquive et le tir.
+            </p>
+            <div class="mt-3 space-y-1.5 rounded-xl bg-slate-900/80 p-2.5 text-[11px] border border-slate-800">
+              <div class="flex justify-between text-cyan-300">
+                <span class="font-bold">J1 (Bleu) :</span>
+                <span class="font-mono">ZQSD / WASD + Espace</span>
+              </div>
+              <div class="flex justify-between text-rose-300">
+                <span class="font-bold">J2 (Rouge) :</span>
+                <span class="font-mono">Flèches + Entrée / M</span>
+              </div>
+            </div>
+          </div>
+          <button id="btn-start-local" class="neon-btn-pink w-full rounded-xl py-3 mt-4 font-cyber text-xs sm:text-sm font-bold text-white">
+            🔥 LANCER DUEL 2 JOUEURS
+          </button>
+        </div>
+
+        <!-- MODE 3: ONLINE WORLDWIDE P2P (WebRTC) -->
+        <div class="hud-glass rounded-2xl p-4 flex flex-col justify-between border border-amber-500/30 hover:border-amber-400 transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-300">🌍 EN LIGNE MONDIAL</span>
+              <span class="text-xs font-mono text-emerald-400">P2P Vercel</span>
+            </div>
+            <h2 class="font-cyber text-lg font-bold text-white mt-2.5">Salon Multijoueur Mondial</h2>
+            <p class="text-xs text-slate-300 mt-1">
+              Partage ton code à un ami à distance ou lance un matchmaking rapide.
+            </p>
+            <div class="mt-2.5 flex flex-col gap-2">
+              <div class="flex items-center justify-between rounded-lg bg-slate-900/90 px-2.5 py-1.5 border border-slate-700">
+                <span class="text-[11px] text-slate-400">Ton Code :</span>
+                <span id="my-room-code" class="font-cyber text-xs font-bold text-amber-300">GÉNÉRATION...</span>
+                <button id="btn-copy-code" class="text-[11px] font-semibold text-cyan-400 hover:underline">Copier</button>
+              </div>
+              <div class="flex gap-1.5">
+                <input id="input-join-code" type="text" placeholder="Code ami (ex: ECHO-4821)" class="w-full rounded-lg bg-slate-900/90 px-2.5 py-1.5 text-xs text-white border border-slate-700 focus:border-amber-400 focus:outline-none uppercase font-mono" />
+                <button id="btn-join-online" class="rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 transition shrink-0">
+                  Rejoindre
+                </button>
+              </div>
+              <div id="online-status-msg" class="text-[11px] text-slate-400 truncate">
+                Prêt à héberger ou rejoindre un duel mondial.
+              </div>
+            </div>
+          </div>
+          <button id="btn-sim-online" class="w-full rounded-xl py-2.5 mt-3 border border-amber-400/50 bg-amber-500/15 hover:bg-amber-500/25 font-cyber text-xs font-bold text-amber-200 transition">
+            🌐 MATCHMAKING RAPIDE (TEST MONDIAL)
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- INTERACTIVE RULES / HELP MODAL -->
+  <div id="rules-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="hud-glass w-full max-w-lg rounded-3xl p-6 border border-amber-400/50 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-cyber text-lg font-bold text-amber-300">❓ Comment Jouer à ECHO-PARADOX 3D ?</h3>
+        <button id="btn-close-rules" class="rounded-lg bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:text-white">✕</button>
+      </div>
+      <div class="mt-4 space-y-3 text-xs sm:text-sm text-slate-200">
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-cyan-500/30">
+          <div class="font-bold text-cyan-300">🔵 1. Qui es-tu ?</div>
+          <p class="mt-1 text-xs text-slate-300">
+            Tu es le vaisseau <strong>BLEU</strong> (marqué <strong>"🔵 TOI"</strong> avec une flèche au-dessus). Ton adversaire est le vaisseau <strong>ROUGE</strong>.
+          </p>
+        </div>
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-emerald-500/30">
+          <div class="font-bold text-emerald-300">🕹️ 2. Comment bouger et tirer ? (3 façons au choix)</div>
+          <ul class="mt-1 list-disc pl-5 text-xs text-slate-300 space-y-1">
+            <li><strong>À la Souris / Doigt :</strong> Clique ou garde appuyé sur l'arène 3D, ton vaisseau va directement vers ton curseur !</li>
+            <li><strong>Au Clavier :</strong> Utilise les <strong>Flèches (↑ ↓ ← →)</strong> ou <strong>ZQSD / WASD</strong>.</li>
+            <li><strong>Avec les Boutons à l'écran :</strong> Clique sur les flèches <code>▲ ▼ ◀ ▶</code> en bas à gauche.</li>
+            <li><strong>Tir Auto :</strong> Ton vaisseau vise et tire tout seul sur l'ennemi ! Tu peux aussi appuyer sur <strong>ESPACE</strong> ou le bouton <strong>TIR PLASMA</strong>.</li>
+          </ul>
+        </div>
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-amber-500/30">
+          <div class="font-bold text-amber-300">⏪ 3. C'est quoi le "Clone Temporel" (10s) ?</div>
+          <p class="mt-1 text-xs text-slate-300">
+            Regarde le compteur en haut : toutes les <strong>10 secondes</strong>, un clone bleu translucide apparaît et rejoue tous tes mouvements et tes tirs des 10 dernières secondes. Plus la manche dure, plus tu as d'alliés qui tirent avec toi !
+          </p>
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button id="btn-ok-rules" class="neon-btn-cyan rounded-xl px-6 py-2.5 font-cyber text-xs font-bold text-white">
+          C'est compris, reprendre le jeu !
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- END OF MATCH / VICTORY MODAL -->
+  <div id="gameover-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+    <div class="hud-glass w-full max-w-md rounded-3xl p-6 text-center border border-cyan-400/50 shadow-2xl">
+      <div id="gameover-badge" class="inline-block rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-400/30 mb-2">
+        PARADOXE TEMPOREL RÉSOLU
+      </div>
+      <h2 id="gameover-title" class="font-cyber text-2xl sm:text-3xl font-black text-white neon-text-cyan">
+        VICTOIRE !
+      </h2>
+      <p id="gameover-subtitle" class="text-xs sm:text-sm text-slate-300 mt-1">
+        Tu as dominé la boucle temporelle avec tes clones holographiques.
+      </p>
+
+      <!-- Match Breakdown -->
+      <div class="grid grid-cols-3 gap-2 my-5 rounded-2xl bg-slate-900/80 p-3.5 border border-slate-800">
+        <div>
+          <div class="text-[10px] uppercase text-slate-400">Score Final</div>
+          <div id="gameover-score" class="font-cyber text-lg font-black text-white mt-0.5">2 - 0</div>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase text-slate-400">Clones Actifs</div>
+          <div id="gameover-clones" class="font-cyber text-lg font-black text-cyan-400 mt-0.5">4</div>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase text-slate-400">Tirs Touchés</div>
+          <div id="gameover-hits" class="font-cyber text-lg font-black text-amber-400 mt-0.5">12</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button id="btn-rematch" class="neon-btn-cyan flex-1 rounded-xl py-2.5 font-cyber text-xs font-bold text-white">
+          🔄 REJOUER IMMÉDIATEMENT
+        </button>
+        <button id="btn-share-score" class="rounded-xl border border-emerald-400/50 bg-emerald-500/20 hover:bg-emerald-500/30 px-4 py-2.5 font-cyber text-xs font-bold text-emerald-200 transition">
+          📤 PARTAGER DÉFI
+        </button>
+      </div>
+      <button id="btn-back-lobby" class="mt-2.5 w-full rounded-xl py-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+        Retour au Menu Principal
+      </button>
+    </div>
+  </div>
+
+  <!-- VERCEL DEPLOYMENT & VIRAL GUIDE MODAL -->
+  <div id="vercel-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="hud-glass w-full max-w-lg rounded-3xl p-6 border border-cyan-400/40 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-cyber text-lg font-bold text-white flex items-center gap-2">
+          <span>▲</span> Déployer ECHO-PARADOX 3D sur Vercel
+        </h3>
+        <button id="btn-close-vercel" class="rounded-lg bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:text-white">✕</button>
+      </div>
+      <div class="mt-4 space-y-3 text-xs sm:text-sm text-slate-300">
+        <p>
+          Ce jeu est conçu avec une architecture <strong>100 % statique (Three.js + WebRTC PeerJS)</strong>. Tu n'as besoin d'aucun serveur backend payant pour que des joueurs du monde entier s'affrontent !
+        </p>
+        <div class="rounded-2xl bg-slate-900/90 p-3.5 border border-slate-800 space-y-2">
+          <div class="font-bold text-cyan-300">🚀 Étape 1 : Préparer le dossier</div>
+          <p class="text-xs text-slate-400">
+            Télécharge ce fichier HTML et renomme-le <code>index.html</code> dans un dossier <code>echo-paradox</code>.
+          </p>
+          <div class="font-bold text-cyan-300 pt-1">🌐 Étape 2 : Mettre en ligne sur Vercel (30 sec)</div>
+          <ul class="list-disc pl-5 text-xs text-slate-400 space-y-1">
+            <li>Connecte ton compte sur <strong>vercel.com</strong> (gratuit).</li>
+            <li>Importe ton dépôt GitHub ou utilise la commande <code>npx vercel</code> dans ton dossier.</li>
+            <li>Vercel te donne immédiatement une URL mondiale en HTTPS (ex: <code>echo-paradox.vercel.app</code>).</li>
+          </ul>
+          <div class="font-bold text-emerald-300 pt-1">🔥 Étape 3 : Pourquoi le multijoueur marche déjà ?</div>
+          <p class="text-xs text-slate-400">
+            Le mode <strong>En Ligne Mondial</strong> utilise <em>PeerJS (WebRTC)</em> : dès que deux joueurs entrent le même code à 4 chiffres sur ton lien Vercel, leurs navigateurs se connectent directement en pair-à-pair à 60 FPS !
+          </p>
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button id="btn-ok-vercel" class="neon-btn-cyan rounded-xl px-5 py-2 font-cyber text-xs font-bold text-white">
+          Compris, retour au jeu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-box" class="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-50 hidden rounded-xl bg-slate-900/95 px-4 py-2 text-xs font-semibold text-cyan-300 border border-cyan-400/50 shadow-xl">
+    Lien copié dans le presse-papiers !
+  </div>
+
+  <!-- BOTTOM ON-SCREEN CONTROLS & CONTROLS BAR (ALWAYS VISIBLE IN GAME ON BOTH PC & MOBILE!) -->
+  <footer id="ingame-controls-footer" class="fixed bottom-0 left-0 right-0 z-20 hidden items-end justify-between p-3 sm:p-4 pointer-events-none">
+    <!-- Always-visible D-Pad for Player 1 (Works with Mouse Click, Touch, or Keyboard!) -->
+    <div class="flex flex-col items-start gap-1.5 pointer-events-auto">
+      <div class="rounded-lg bg-slate-950/85 px-2.5 py-1 text-[11px] font-semibold text-cyan-200 border border-cyan-500/30">
+        🕹️ Bouger : <strong>Flèches</strong>, <strong>ZQSD</strong>, ou <strong>Clique sur l'arène / sur les flèches ci-dessous</strong>
+      </div>
+      <div class="grid grid-cols-3 gap-1.5">
+        <div></div>
+        <button id="dpad-up" data-dir="up" class="touch-move-btn h-11 w-11 rounded-xl hud-glass flex items-center justify-center text-base font-bold text-cyan-300 hover:bg-cyan-500/30 active:bg-cyan-500/50">▲</button>
+        <div></div>
+        <button id="dpad-left" data-dir="left" class="touch-move-btn h-11 w-11 rounded-xl hud-glass flex items-center justify-center text-base font-bold text-cyan-300 hover:bg-cyan-500/30 active:bg-cyan-500/50">◀</button>
+        <button id="dpad-down" data-dir="down" class="touch-move-btn h-11 w-11 rounded-xl hud-glass flex items-center justify-center text-base font-bold text-cyan-300 hover:bg-cyan-500/30 active:bg-cyan-500/50">▼</button>
+        <button id="dpad-right" data-dir="right" class="touch-move-btn h-11 w-11 rounded-xl hud-glass flex items-center justify-center text-base font-bold text-cyan-300 hover:bg-cyan-500/30 active:bg-cyan-500/50">▶</button>
+      </div>
+    </div>
+
+    <!-- Right Action Buttons: Auto-Fire Toggle, Dash Shield, Manual Shoot -->
+    <div class="flex flex-col items-end gap-1.5 pointer-events-auto">
+      <button id="btn-autofire-toggle" class="rounded-xl bg-emerald-500/25 border border-emerald-400 px-3 py-1 text-xs font-bold text-emerald-200 hover:bg-emerald-500/35 transition">
+        🤖 TIR AUTO : ACTIVÉ (Vise et tire tout seul)
+      </button>
+      <div class="flex items-center gap-2">
+        <button id="btn-action-dash" class="hud-glass rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3 text-xs font-cyber font-bold text-amber-300 border border-amber-400/50 hover:bg-amber-500/20 active:scale-95 transition">
+          🛡️ DASH <span id="dash-cooldown-label" class="font-mono text-[10px] text-slate-300">(PRÊT)</span>
+        </button>
+        <button id="btn-action-shoot" class="neon-btn-cyan rounded-2xl px-4 py-3 sm:px-6 sm:py-3 text-xs sm:text-sm font-cyber font-black text-white active:scale-95 transition">
+          ⚡ TIR PLASMA
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. SYNTHESIZED CYBER AUDIO ENGINE (Web Audio API - Zero external files)
+    // =========================================================================
+    class CyberAudio {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playLaser(isEcho = false) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = isEcho ? 'triangle' : 'sawtooth';
+        osc.frequency.setValueAtTime(isEcho ? 660 : 880, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
+        gain.gain.setValueAtTime(isEcho ? 0.05 : 0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.13);
+      }
+      playDash() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(920, now + 0.18);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+      playHit() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+      playTimeRewind() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [330, 440, 660, 880].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+          osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + idx * 0.06 + 0.25);
+          gain.gain.setValueAtTime(0.12, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.26);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.27);
+        });
+      }
+      playVictory() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.11);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.11);
+          osc.stop(now + idx * 0.11 + 0.36);
+        });
+      }
+    }
+
+    const soundFX = new CyberAudio();
+
+    // =========================================================================
+    // 2. PERSISTENT PLAYER STATS (Safe localStorage wrapper)
+    // =========================================================================
+    const PlayerStats = {
+      wins: 0,
+      echoes: 0,
+      load() {
+        try {
+          const raw = localStorage.getItem('echo_paradox_stats_v1');
+          if (raw) {
+            const data = JSON.parse(raw);
+            this.wins = Number(data.wins) || 0;
+            this.echoes = Number(data.echoes) || 0;
+          }
+        } catch (e) {}
+        this.updateUI();
+      },
+      save() {
+        try {
+          localStorage.setItem('echo_paradox_stats_v1', JSON.stringify({
+            wins: this.wins,
+            echoes: this.echoes
+          }));
+        } catch (e) {}
+        this.updateUI();
+      },
+      updateUI() {
+        const wEl = document.getElementById('stat-wins');
+        const eEl = document.getElementById('stat-echoes');
+        const rEl = document.getElementById('stat-rank');
+        if (wEl) wEl.textContent = String(this.wins);
+        if (eEl) eEl.textContent = String(this.echoes);
+        if (rEl) {
+          if (this.wins >= 15) rEl.textContent = 'MAÎTRE PARADOXE';
+          else if (this.wins >= 7) rEl.textContent = 'DIAMANT AR';
+          else if (this.wins >= 3) rEl.textContent = 'OR CYBER';
+          else rEl.textContent = 'BRONZE I';
+        }
+      }
+    };
+
+    // =========================================================================
+    // 3. THREE.JS 3D HOLOGRAPHIC AR ENGINE & TIME-CLONE GAMEPLAY
+    // =========================================================================
+    const container = document.getElementById('game-canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x030712, 0.014);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 250);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.75);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    dirLight.position.set(15, 35, 20);
+    scene.add(dirLight);
+
+    const cyanPointLight = new THREE.PointLight(0x06b6d4, 2.5, 35);
+    cyanPointLight.position.set(-12, 5, 0);
+    scene.add(cyanPointLight);
+
+    const pinkPointLight = new THREE.PointLight(0xf43f5e, 2.5, 35);
+    pinkPointLight.position.set(12, 5, 0);
+    scene.add(pinkPointLight);
+
+    // Arena Constants
+    const ARENA_RADIUS = 19;
+    const obstacles = [];
+
+    // Build 3D Holographic Octagon Arena
+    const arenaGroup = new THREE.Group();
+    scene.add(arenaGroup);
+
+    // Base Dark Reflective Disc (Also used for Mouse Raycasting!)
+    const baseGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS * 0.92, 1.2, 32);
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: 0x091326,
+      metalness: 0.7,
+      roughness: 0.3
+    });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.y = -0.6;
+    arenaGroup.add(baseMesh);
+
+    // Glowing Polar Grid Overlay
+    const polarGrid = new THREE.PolarGridHelper(ARENA_RADIUS - 0.3, 16, 8, 64, 0x0284c7, 0x1e293b);
+    polarGrid.position.y = 0.03;
+    arenaGroup.add(polarGrid);
+
+    // Outer Neon Perimeter Ring
+    const borderGeo = new THREE.TorusGeometry(ARENA_RADIUS, 0.25, 16, 64);
+    const borderMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+    const borderRing = new THREE.Mesh(borderGeo, borderMat);
+    borderRing.rotation.x = Math.PI / 2;
+    borderRing.position.y = 0.25;
+    arenaGroup.add(borderRing);
+
+    // Outer Orbital AR Hologram Rings
+    const orbitalRing1 = new THREE.Mesh(
+      new THREE.TorusGeometry(ARENA_RADIUS + 3.5, 0.06, 12, 64),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 })
+    );
+    orbitalRing1.rotation.x = Math.PI / 2.2;
+    arenaGroup.add(orbitalRing1);
+
+    const orbitalRing2 = new THREE.Mesh(
+      new THREE.TorusGeometry(ARENA_RADIUS + 6.2, 0.05, 12, 64),
+      new THREE.MeshBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.35 })
+    );
+    orbitalRing2.rotation.x = Math.PI / 1.8;
+    arenaGroup.add(orbitalRing2);
+
+    // 4 Tactical Holographic Cover Pillars inside the Arena
+    const pillarPositions = [
+      { x: -6.8, z: -6.8 },
+      { x: 6.8, z: -6.8 },
+      { x: -6.8, z: 6.8 },
+      { x: 6.8, z: 6.8 }
+    ];
+    pillarPositions.forEach((pos) => {
+      const pGeo = new THREE.CylinderGeometry(1.15, 1.15, 2.5, 6);
+      const pMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.4,
+        metalness: 0.8,
+        roughness: 0.2
+      });
+      const pillar = new THREE.Mesh(pGeo, pMat);
+      pillar.position.set(pos.x, 1.25, pos.z);
+
+      const edges = new THREE.EdgesGeometry(pGeo);
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x38bdf8 }));
+      pillar.add(line);
+
+      arenaGroup.add(pillar);
+      obstacles.push({ x: pos.x, z: pos.z, radius: 1.35, mesh: pillar });
+    });
+
+    // Central Chrono Core Power-up (Gives Triple Shot + Heal)
+    const chronoCoreGroup = new THREE.Group();
+    const coreOcta = new THREE.Mesh(
+      new THREE.OctahedronGeometry(1.05, 0),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24, wireframe: false })
+    );
+    const coreWire = new THREE.Mesh(
+      new THREE.OctahedronGeometry(1.45, 0),
+      new THREE.MeshBasicMaterial({ color: 0xfde047, wireframe: true, transparent: true, opacity: 0.8 })
+    );
+    chronoCoreGroup.add(coreOcta);
+    chronoCoreGroup.add(coreWire);
+    chronoCoreGroup.position.set(0, 1.4, 0);
+    scene.add(chronoCoreGroup);
+
+    let chronoCoreActive = true;
+    let chronoCoreRespawnTimer = 0;
+
+    // Click Target Ring Indicator on Floor (Shows where mouse click moves P1)
+    const clickTargetMesh = new THREE.Mesh(
+      new THREE.RingGeometry(0.5, 0.85, 24),
+      new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide, transparent: true, opacity: 0.0 })
+    );
+    clickTargetMesh.rotation.x = -Math.PI / 2;
+    clickTargetMesh.position.y = 0.1;
+    scene.add(clickTargetMesh);
+
+    // Background Starfield
+    const starsGeo = new THREE.BufferGeometry();
+    const starCount = 350;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount * 3; i += 3) {
+      starPositions[i] = (Math.random() - 0.5) * 110;
+      starPositions[i + 1] = (Math.random() - 0.3) * 50;
+      starPositions[i + 2] = (Math.random() - 0.5) * 110;
+    }
+    starsGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starsMat = new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.35, transparent: true, opacity: 0.65 });
+    const starField = new THREE.Points(starsGeo, starsMat);
+    scene.add(starField);
+
+    // =========================================================================
+    // 4. PLAYER, HOLOGRAPHIC CLONE & AIM LASER BUILDERS
+    // =========================================================================
+    function createCyberFighterMesh(colorHex, isGhost = false, hasAimLaser = false) {
+      const group = new THREE.Group();
+
+      // Main Futuristic Hover Chassis (Slightly larger & brighter for visibility)
+      const bodyGeo = new THREE.ConeGeometry(1.15, 2.5, 6);
+      bodyGeo.rotateX(Math.PI / 2);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: colorHex,
+        emissive: colorHex,
+        emissiveIntensity: isGhost ? 0.9 : 0.55,
+        metalness: 0.7,
+        roughness: 0.2,
+        transparent: isGhost,
+        opacity: isGhost ? 0.48 : 1.0
+      });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.9;
+      group.add(body);
+
+      // Holographic Wireframe Shell
+      const wireGeo = new THREE.EdgesGeometry(bodyGeo);
+      const wireMat = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: isGhost ? 0.85 : 0.95
+      });
+      const wire = new THREE.LineSegments(wireGeo, wireMat);
+      body.add(wire);
+
+      // Hover Energy Ring Under Fighter
+      const ringGeo = new THREE.RingGeometry(1.05, 1.4, 24);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: isGhost ? 0.45 : 0.9
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.y = 0.14;
+      group.add(ring);
+
+      // Optional Aiming Laser Sight Line (So player sees where their shots go!)
+      if (hasAimLaser) {
+        const laserGeo = new THREE.CylinderGeometry(0.04, 0.04, 10, 6);
+        laserGeo.rotateX(Math.PI / 2);
+        const laserMat = new THREE.MeshBasicMaterial({
+          color: 0x67e8f9,
+          transparent: true,
+          opacity: 0.35
+        });
+        const laserLine = new THREE.Mesh(laserGeo, laserMat);
+        laserLine.position.set(0, 0.9, 6.2);
+        group.add(laserLine);
+      }
+
+      // Shield Sphere (Visible when dashing / invulnerable)
+      const shieldGeo = new THREE.SphereGeometry(1.75, 18, 18);
+      const shieldMat = new THREE.MeshBasicMaterial({
+        color: 0xfacc15,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.0
+      });
+      const shield = new THREE.Mesh(shieldGeo, shieldMat);
+      shield.position.y = 0.9;
+      group.add(shield);
+
+      group.userData = { body, ring, shield, shieldMat };
+      return group;
+    }
+
+    // Active Game Entities & State
+    const gameState = {
+      running: false,
+      paused: false,
+      mode: 'bot', // 'bot', 'local', 'online'
+      botDifficulty: 'easy', // Default to 'easy' so new players immediately win & understand!
+      autoFire: true, // Auto-fire ON by default so player only needs to move!
+      cameraMode: 0, // 0: Immersive, 1: Tactical Top-Down, 2: Dynamic AR Orbit
+      loopDuration: 10.0,
+      loopTimer: 10.0,
+      cycleCount: 1,
+      shakeIntensity: 0,
+      slowMoFactor: 1.0,
+      totalPlayerHits: 0,
+      scores: { p1: 0, p2: 0 },
+      roundsToWin: 2
+    };
+
+    const p1 = {
+      id: 'p1',
+      team: 1,
+      color: 0x06b6d4,
+      x: -11,
+      z: 0,
+      vx: 0,
+      vz: 0,
+      targetX: null,
+      targetZ: null,
+      angle: 0,
+      hp: 100,
+      maxHp: 100,
+      shootCooldown: 0,
+      dashCooldown: 0,
+      dashActiveTimer: 0,
+      tripleShotTimer: 0,
+      mesh: createCyberFighterMesh(0x06b6d4, false, true),
+      currentRecording: [],
+      pastRecordings: []
+    };
+    scene.add(p1.mesh);
+
+    const p2 = {
+      id: 'p2',
+      team: 2,
+      color: 0xf43f5e,
+      x: 11,
+      z: 0,
+      vx: 0,
+      vz: 0,
+      angle: Math.PI,
+      hp: 100,
+      maxHp: 100,
+      shootCooldown: 0,
+      dashCooldown: 0,
+      dashActiveTimer: 0,
+      tripleShotTimer: 0,
+      mesh: createCyberFighterMesh(0xf43f5e, false, false),
+      currentRecording: [],
+      pastRecordings: []
+    };
+    scene.add(p2.mesh);
+
+    let activeEchoClones = [];
+    let projectiles = [];
+    let particles = [];
+    let shockwaves = [];
+
+    // =========================================================================
+    // 5. UNIVERSAL INPUT HANDLING (Keyboard + Mouse Click-to-Move + Touch D-Pad)
+    // =========================================================================
+    const keys = {};
+    const touchDir = { up: false, down: false, left: false, right: false };
+    const raycaster = new THREE.Raycaster();
+    const mouseNDC = new THREE.Vector2();
+    let isPointerDownOnArena = false;
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      // Clear mouse target if keyboard is used
+      if (['KeyW', 'KeyZ', 'KeyS', 'KeyA', 'KeyQ', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        p1.targetX = null;
+        p1.targetZ = null;
+      }
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && gameState.running) {
+        e.preventDefault();
+      }
+      if (e.code === 'KeyP' && gameState.running) {
+        togglePause();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    // Click / Drag directly on 3D Arena to Move P1 & Shoot!
+    function updatePointerTarget(clientX, clientY) {
+      mouseNDC.x = (clientX / window.innerWidth) * 2 - 1;
+      mouseNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouseNDC, camera);
+      const intersects = raycaster.intersectObject(baseMesh);
+      if (intersects.length > 0) {
+        const pt = intersects[0].point;
+        p1.targetX = pt.x;
+        p1.targetZ = pt.z;
+        clickTargetMesh.position.set(pt.x, 0.12, pt.z);
+        clickTargetMesh.material.opacity = 0.85;
+      }
+    }
+
+    container.addEventListener('pointerdown', (e) => {
+      window.focus();
+      if (!gameState.running || gameState.paused) return;
+      isPointerDownOnArena = true;
+      updatePointerTarget(e.clientX, e.clientY);
+      triggerShoot(p1, false);
+    });
+
+    container.addEventListener('pointermove', (e) => {
+      if (!gameState.running || gameState.paused || !isPointerDownOnArena) return;
+      updatePointerTarget(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('pointerup', () => {
+      isPointerDownOnArena = false;
+    });
+
+    // Touch / Click D-Pad listeners
+    document.querySelectorAll('.touch-move-btn').forEach((btn) => {
+      const dir = btn.getAttribute('data-dir');
+      const startMove = (ev) => {
+        ev.preventDefault();
+        p1.targetX = null;
+        p1.targetZ = null;
+        touchDir[dir] = true;
+      };
+      const endMove = (ev) => {
+        ev.preventDefault();
+        touchDir[dir] = false;
+      };
+      btn.addEventListener('touchstart', startMove, { passive: false });
+      btn.addEventListener('touchend', endMove, { passive: false });
+      btn.addEventListener('mousedown', startMove);
+      btn.addEventListener('mouseup', endMove);
+      btn.addEventListener('mouseleave', endMove);
+    });
+
+    document.getElementById('btn-action-shoot').addEventListener('click', () => {
+      window.focus();
+      if (gameState.running && !gameState.paused) {
+        triggerShoot(p1, false);
+      }
+    });
+
+    document.getElementById('btn-action-dash').addEventListener('click', () => {
+      window.focus();
+      if (gameState.running && !gameState.paused) {
+        triggerDash(p1);
+      }
+    });
+
+    document.getElementById('btn-autofire-toggle').addEventListener('click', () => {
+      gameState.autoFire = !gameState.autoFire;
+      const btn = document.getElementById('btn-autofire-toggle');
+      if (gameState.autoFire) {
+        btn.textContent = '🤖 TIR AUTO : ACTIVÉ (Vise et tire tout seul)';
+        btn.className = 'rounded-xl bg-emerald-500/25 border border-emerald-400 px-3 py-1 text-xs font-bold text-emerald-200 hover:bg-emerald-500/35 transition';
+      } else {
+        btn.textContent = '🎯 TIR MANUEL (Appuie sur ESPACE pour tirer)';
+        btn.className = 'rounded-xl bg-slate-800/90 border border-slate-600 px-3 py-1 text-xs font-bold text-slate-300 hover:border-cyan-400 transition';
+      }
+      window.focus();
+    });
+
+    // =========================================================================
+    // 6. 3D TO 2D FLOATING MARKERS PROJECTION (So Player 1 & Enemy are obvious!)
+    // =========================================================================
+    function updateFloatingMarker(domId, worldX, worldY, worldZ) {
+      const el = document.getElementById(domId);
+      if (!el) return;
+      if (!gameState.running) {
+        el.classList.add('hidden');
+        return;
+      }
+      const vec = new THREE.Vector3(worldX, worldY, worldZ);
+      vec.project(camera);
+      if (vec.z > 1) {
+        el.classList.add('hidden');
+        return;
+      }
+      const x = (vec.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-(vec.y * 0.5) + 0.5) * window.innerHeight;
+      el.classList.remove('hidden');
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+    }
+
+    // =========================================================================
+    // 7. COMBAT MECHANICS: SHOOTING, DASHING, SHOCKWAVES & CLONES
+    // =========================================================================
+    function spawnShockwave(x, z, colorHex, maxRadius = 4.5) {
+      const geo = new THREE.RingGeometry(0.3, 0.55, 32);
+      geo.rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.9
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, 0.18, z);
+      scene.add(mesh);
+      shockwaves.push({ mesh, mat, scale: 1, maxScale: maxRadius * 2, opacity: 0.9 });
+    }
+
+    function spawnExplosion(x, y, z, colorHex, count = 16) {
+      for (let i = 0; i < count; i++) {
+        const pGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
+        const pMat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1 });
+        const mesh = new THREE.Mesh(pGeo, pMat);
+        mesh.position.set(x, y, z);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 3 + Math.random() * 9;
+        scene.add(mesh);
+        particles.push({
+          mesh,
+          mat: pMat,
+          vx: Math.cos(angle) * speed,
+          vy: 2 + Math.random() * 6,
+          vz: Math.sin(angle) * speed,
+          life: 0.45 + Math.random() * 0.35
+        });
+      }
+    }
+
+    function fireProjectile(ownerTeam, x, z, angle, colorHex, isEcho = false) {
+      const geo = new THREE.SphereGeometry(isEcho ? 0.36 : 0.46, 12, 12);
+      const mat = new THREE.MeshBasicMaterial({ color: isEcho ? 0xe0f2fe : colorHex });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + Math.cos(angle) * 1.4, 0.9, z + Math.sin(angle) * 1.4);
+
+      const trailGeo = new THREE.CylinderGeometry(0.14, 0.03, 1.6, 8);
+      trailGeo.rotateZ(Math.PI / 2);
+      const trailMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.8
+      });
+      const trail = new THREE.Mesh(trailGeo, trailMat);
+      trail.position.x = -0.65;
+      mesh.add(trail);
+      mesh.rotation.y = -angle;
+
+      scene.add(mesh);
+      const speed = isEcho ? 19 : 22;
+      projectiles.push({
+        team: ownerTeam,
+        isEcho,
+        x: mesh.position.x,
+        z: mesh.position.z,
+        vx: Math.cos(angle) * speed,
+        vz: Math.sin(angle) * speed,
+        mesh,
+        color: colorHex,
+        bouncesLeft: 1,
+        life: 2.5
+      });
+    }
+
+    function triggerShoot(fighter, isEcho = false) {
+      if (fighter.shootCooldown > 0) return false;
+      fighter.shootCooldown = fighter.tripleShotTimer > 0 ? 0.28 : 0.38;
+      soundFX.playLaser(isEcho);
+
+      if (fighter.tripleShotTimer > 0) {
+        [-0.18, 0, 0.18].forEach((offset) => {
+          fireProjectile(fighter.team, fighter.x, fighter.z, fighter.angle + offset, 0xfbbf24, isEcho);
+        });
+      } else {
+        fireProjectile(fighter.team, fighter.x, fighter.z, fighter.angle, fighter.color, isEcho);
+      }
+      return true;
+    }
+
+    function triggerDash(fighter) {
+      if (fighter.dashCooldown > 0) return false;
+      fighter.dashCooldown = 2.2;
+      fighter.dashActiveTimer = 0.65;
+      soundFX.playDash();
+      spawnShockwave(fighter.x, fighter.z, 0xfacc15, 3.5);
+
+      const dashSpeed = 19;
+      fighter.vx = Math.cos(fighter.angle) * dashSpeed;
+      fighter.vz = Math.sin(fighter.angle) * dashSpeed;
+      return true;
+    }
+
+    // =========================================================================
+    // 8. TIME-LOOP REWIND & HOLOGRAPHIC CLONE SPAWNER
+    // =========================================================================
+    function showBanner(text, icon = '⚡') {
+      const banner = document.getElementById('live-banner');
+      const txtEl = document.getElementById('live-banner-text');
+      const icoEl = document.getElementById('live-banner-icon');
+      if (!banner || !txtEl || !icoEl) return;
+      txtEl.textContent = text;
+      icoEl.textContent = icon;
+      banner.classList.remove('opacity-0', '-translate-y-2');
+      banner.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        banner.classList.remove('opacity-100', 'translate-y-0');
+        banner.classList.add('opacity-0', '-translate-y-2');
+      }, 2600);
+    }
+
+    function setCoachText(htmlText) {
+      const el = document.getElementById('coach-step-text');
+      if (el) el.innerHTML = htmlText;
+    }
+
+    function triggerTimeRewindCycle() {
+      soundFX.playTimeRewind();
+      gameState.cycleCount += 1;
+      gameState.loopTimer = gameState.loopDuration;
+      gameState.shakeIntensity = 0.4;
+
+      const overlay = document.getElementById('rewind-overlay');
+      if (overlay) {
+        overlay.classList.remove('hidden', 'rewind-flash');
+        void overlay.offsetWidth;
+        overlay.classList.add('rewind-flash');
+        setTimeout(() => overlay.classList.add('hidden'), 650);
+      }
+
+      if (p1.currentRecording.length > 10) {
+        p1.pastRecordings.push(p1.currentRecording);
+        if (p1.pastRecordings.length > 3) p1.pastRecordings.shift();
+        PlayerStats.echoes += 1;
+      }
+      if (p2.currentRecording.length > 10) {
+        p2.pastRecordings.push(p2.currentRecording);
+        if (p2.pastRecordings.length > 3) p2.pastRecordings.shift();
+      }
+      PlayerStats.save();
+
+      p1.currentRecording = [];
+      p2.currentRecording = [];
+
+      activeEchoClones.forEach((c) => scene.remove(c.mesh));
+      activeEchoClones = [];
+
+      p1.pastRecordings.forEach((rec) => {
+        const mesh = createCyberFighterMesh(0x38bdf8, true, false);
+        scene.add(mesh);
+        activeEchoClones.push({
+          team: 1,
+          color: 0x38bdf8,
+          recording: rec,
+          frameIndex: 0,
+          mesh
+        });
+      });
+
+      p2.pastRecordings.forEach((rec) => {
+        const mesh = createCyberFighterMesh(0xfb7185, true, false);
+        scene.add(mesh);
+        activeEchoClones.push({
+          team: 2,
+          color: 0xfb7185,
+          recording: rec,
+          frameIndex: 0,
+          mesh
+        });
+      });
+
+      spawnShockwave(p1.x, p1.z, 0x22d3ee, 5.5);
+      spawnShockwave(p2.x, p2.z, 0xf43f5e, 5.5);
+
+      showBanner(`⏪ BOUCLE TEMPORELLE : UN CLONE BLEU ALLIÉ VIENT D'APPARAÎTRE !`, '⏪');
+      setCoachText(`✨ <span class="text-cyan-300">SUPER !</span> Tu as maintenant <strong>${p1.pastRecordings.length} clone(s) bleu(s)</strong> qui rejouent tes tirs passés pour t'aider à vaincre le vaisseau rouge !`);
+      updateHUD();
+    }
+
+    // =========================================================================
+    // 9. INTELLIGENT BOT AI (Balanced for Fun & Playability)
+    // =========================================================================
+    function updateBotAI(dt) {
+      let moveX = 0;
+      let moveZ = 0;
+
+      let dangerProj = null;
+      let minDist = 6.0;
+      for (const proj of projectiles) {
+        if (proj.team !== p2.team) {
+          const dx = proj.x - p2.x;
+          const dz = proj.z - p2.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < minDist) {
+            minDist = dist;
+            dangerProj = proj;
+          }
+        }
+      }
+
+      if (dangerProj && gameState.botDifficulty !== 'easy') {
+        const perpX = -dangerProj.vz;
+        const perpZ = dangerProj.vx;
+        const len = Math.hypot(perpX, perpZ) || 1;
+        moveX += (perpX / len) * 1.3;
+        moveZ += (perpZ / len) * 1.3;
+
+        if (minDist < 3.2 && p2.dashCooldown <= 0 && gameState.botDifficulty === 'hard') {
+          triggerDash(p2);
+        }
+      } else {
+        const dx = p1.x - p2.x;
+        const dz = p1.z - p2.z;
+        const dist = Math.hypot(dx, dz) || 1;
+        const desiredDist = 10.5;
+        const radialFactor = (dist - desiredDist) * 0.22;
+        const orbitDir = Math.sin(performance.now() * 0.001) > 0 ? 1 : -1;
+
+        moveX += (dx / dist) * radialFactor - (dz / dist) * orbitDir * 0.75;
+        moveZ += (dz / dist) * radialFactor + (dx / dist) * orbitDir * 0.75;
+      }
+
+      const mag = Math.hypot(moveX, moveZ);
+      const speedMult = gameState.botDifficulty === 'hard' ? 9.8 : gameState.botDifficulty === 'medium' ? 7.6 : 5.4;
+      if (mag > 0.01) {
+        p2.vx = (moveX / mag) * speedMult;
+        p2.vz = (moveZ / mag) * speedMult;
+      }
+
+      const leadFactor = gameState.botDifficulty === 'hard' ? 0.25 : 0;
+      const targetX = p1.x + p1.vx * leadFactor;
+      const targetZ = p1.z + p1.vz * leadFactor;
+      p2.angle = Math.atan2(targetZ - p2.z, targetX - p2.x);
+
+      // Bot shoots less frequently on Easy so new players can comfortably learn and win
+      const shootChance = gameState.botDifficulty === 'hard' ? 0.85 : gameState.botDifficulty === 'medium' ? 0.55 : 0.24;
+      if (p2.shootCooldown <= 0 && Math.random() < shootChance * dt * 8) {
+        triggerShoot(p2, false);
+      }
+    }
+
+    // =========================================================================
+    // 10. PHYSICS, COLLISIONS & ROUND MANAGEMENT
+    // =========================================================================
+    function constrainToArenaAndObstacles(fighter) {
+      for (const obs of obstacles) {
+        const dx = fighter.x - obs.x;
+        const dz = fighter.z - obs.z;
+        const dist = Math.hypot(dx, dz);
+        const minDist = obs.radius + 1.0;
+        if (dist < minDist && dist > 0.001) {
+          fighter.x = obs.x + (dx / dist) * minDist;
+          fighter.z = obs.z + (dz / dist) * minDist;
+        }
+      }
+      const r = Math.hypot(fighter.x, fighter.z);
+      const maxR = ARENA_RADIUS - 1.2;
+      if (r > maxR) {
+        fighter.x = (fighter.x / r) * maxR;
+        fighter.z = (fighter.z / r) * maxR;
+      }
+    }
+
+    function updateFighter(fighter, dt, didShootThisFrame) {
+      if (fighter.shootCooldown > 0) fighter.shootCooldown = Math.max(0, fighter.shootCooldown - dt);
+      if (fighter.dashCooldown > 0) fighter.dashCooldown = Math.max(0, fighter.dashCooldown - dt);
+      if (fighter.dashActiveTimer > 0) fighter.dashActiveTimer = Math.max(0, fighter.dashActiveTimer - dt);
+      if (fighter.tripleShotTimer > 0) fighter.tripleShotTimer = Math.max(0, fighter.tripleShotTimer - dt);
+
+      fighter.x += fighter.vx * dt;
+      fighter.z += fighter.vz * dt;
+      fighter.vx *= 0.85;
+      fighter.vz *= 0.85;
+
+      constrainToArenaAndObstacles(fighter);
+
+      fighter.mesh.position.set(fighter.x, 0, fighter.z);
+      fighter.mesh.rotation.y = -fighter.angle + Math.PI / 2;
+      fighter.mesh.userData.shieldMat.opacity = fighter.dashActiveTimer > 0 ? 0.7 : 0.0;
+      fighter.mesh.userData.shield.rotation.y += dt * 4;
+
+      fighter.currentRecording.push({
+        x: fighter.x,
+        z: fighter.z,
+        angle: fighter.angle,
+        shoot: didShootThisFrame,
+        dash: fighter.dashActiveTimer > 0
+      });
+    }
+
+    function updateHUD() {
+      const p1Pct = `${Math.max(0, p1.hp)}%`;
+      const p2Pct = `${Math.max(0, p2.hp)}%`;
+      document.getElementById('hud-p1-hp').style.width = p1Pct;
+      document.getElementById('hud-p2-hp').style.width = p2Pct;
+      const m1 = document.getElementById('marker-p1-hp');
+      const m2 = document.getElementById('marker-p2-hp');
+      if (m1) m1.style.width = p1Pct;
+      if (m2) m2.style.width = p2Pct;
+
+      document.getElementById('hud-score-p1').textContent = String(gameState.scores.p1);
+      document.getElementById('hud-score-p2').textContent = String(gameState.scores.p2);
+      document.getElementById('hud-p1-clones').textContent = `${p1.pastRecordings.length} Clone${p1.pastRecordings.length > 1 ? 's' : ''}`;
+      document.getElementById('hud-p2-clones').textContent = `${p2.pastRecordings.length} Clone${p2.pastRecordings.length > 1 ? 's' : ''}`;
+      document.getElementById('hud-cycle-badge').textContent = `C${gameState.cycleCount}`;
+
+      const dashLabel = document.getElementById('dash-cooldown-label');
+      if (dashLabel) {
+        dashLabel.textContent = p1.dashCooldown <= 0.05 ? '(PRÊT)' : `(${p1.dashCooldown.toFixed(1)}s)`;
+      }
+    }
+
+    function resetRoundPositions(keepScores = true) {
+      p1.x = -11.5;
+      p1.z = 0;
+      p1.vx = 0;
+      p1.vz = 0;
+      p1.targetX = null;
+      p1.targetZ = null;
+      p1.angle = 0;
+      p1.hp = 100;
+      p1.shootCooldown = 0;
+      p1.dashCooldown = 0;
+      p1.dashActiveTimer = 0;
+      p1.tripleShotTimer = 0;
+      p1.currentRecording = [];
+      p1.pastRecordings = [];
+
+      p2.x = 11.5;
+      p2.z = 0;
+      p2.vx = 0;
+      p2.vz = 0;
+      p2.angle = Math.PI;
+      p2.hp = 100;
+      p2.shootCooldown = 0;
+      p2.dashCooldown = 0;
+      p2.dashActiveTimer = 0;
+      p2.tripleShotTimer = 0;
+      p2.currentRecording = [];
+      p2.pastRecordings = [];
+
+      activeEchoClones.forEach((c) => scene.remove(c.mesh));
+      activeEchoClones = [];
+
+      projectiles.forEach((pr) => scene.remove(pr.mesh));
+      projectiles = [];
+
+      gameState.loopTimer = gameState.loopDuration;
+      gameState.cycleCount = 1;
+      gameState.slowMoFactor = 1.0;
+      chronoCoreActive = true;
+      chronoCoreGroup.visible = true;
+
+      if (!keepScores) {
+        gameState.scores.p1 = 0;
+        gameState.scores.p2 = 0;
+        gameState.totalPlayerHits = 0;
+      }
+      updateHUD();
+    }
+
+    function handleRoundWin(winnerTeam) {
+      soundFX.playVictory();
+      gameState.slowMoFactor = 0.25;
+      gameState.shakeIntensity = 0.65;
+
+      if (winnerTeam === 1) {
+        gameState.scores.p1 += 1;
+      } else {
+        gameState.scores.p2 += 1;
+      }
+      updateHUD();
+
+      if (gameState.scores.p1 >= gameState.roundsToWin || gameState.scores.p2 >= gameState.roundsToWin) {
+        setTimeout(() => {
+          endMatch(winnerTeam);
+        }, 700);
+      } else {
+        showBanner(
+          winnerTeam === 1 ? '🏆 MANCHE GAGNÉE PAR TOI (BLEU) ! ENCORE 1 POUR LA VICTOIRE !' : `⚠️ MANCHE PERDUE ! PRÉPARE LA REVANCHE !`,
+          '🏆'
+        );
+        setTimeout(() => {
+          resetRoundPositions(true);
+        }, 950);
+      }
+    }
+
+    function endMatch(winnerTeam) {
+      gameState.running = false;
+      gameState.slowMoFactor = 1.0;
+
+      document.getElementById('marker-p1').classList.add('hidden');
+      document.getElementById('marker-p2').classList.add('hidden');
+      document.getElementById('marker-core').classList.add('hidden');
+
+      if (winnerTeam === 1) {
+        PlayerStats.wins += 1;
+        PlayerStats.save();
+      }
+
+      const modal = document.getElementById('gameover-modal');
+      const title = document.getElementById('gameover-title');
+      const sub = document.getElementById('gameover-subtitle');
+      const scoreEl = document.getElementById('gameover-score');
+      const clonesEl = document.getElementById('gameover-clones');
+      const hitsEl = document.getElementById('gameover-hits');
+
+      if (winnerTeam === 1) {
+        title.textContent = '🎉 VICTOIRE ! TU AS GAGNÉ !';
+        title.className = 'font-cyber text-2xl sm:text-3xl font-black text-white neon-text-cyan';
+        sub.textContent = 'Bravo ! Tes déplacements et tes clones temporels ont écrasé l\'adversaire.';
+      } else {
+        title.textContent = '💥 DÉFAITE... REJOUE !';
+        title.className = 'font-cyber text-2xl sm:text-3xl font-black text-white neon-text-pink';
+        sub.textContent = 'Astuce : Ramasse le diamant jaune au milieu et utilise le bouton BOUCLIER DASH !';
+      }
+
+      scoreEl.textContent = `${gameState.scores.p1} - ${gameState.scores.p2}`;
+      clonesEl.textContent = String(activeEchoClones.length);
+      hitsEl.textContent = String(gameState.totalPlayerHits);
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // =========================================================================
+    // 11. ONLINE P2P MULTIPLAYER (PeerJS WebRTC for Global Play on Vercel)
+    // =========================================================================
+    let peerInstance = null;
+    let activeConn = null;
+    let myShortCode = 'ECHO-' + Math.floor(1000 + Math.random() * 9000);
+
+    function initPeerMultiplayer() {
+      const codeEl = document.getElementById('my-room-code');
+      if (codeEl) codeEl.textContent = myShortCode;
+
+      if (typeof Peer === 'undefined') return;
+      try {
+        peerInstance = new Peer(myShortCode);
+        peerInstance.on('open', (id) => {
+          if (codeEl) codeEl.textContent = id;
+        });
+        peerInstance.on('connection', (conn) => {
+          activeConn = conn;
+          setupPeerConnection();
+          showToast('Joueur distant connecté ! Lancement du duel...');
+          startMatch('online', '🔴 JOUEUR MONDIAL');
+        });
+        peerInstance.on('error', () => {});
+      } catch (e) {}
+    }
+
+    function setupPeerConnection() {
+      if (!activeConn) return;
+      activeConn.on('data', (data) => {
+        if (data && data.type === 'state' && gameState.running && gameState.mode === 'online') {
+          p2.x = -data.x;
+          p2.z = -data.z;
+          p2.angle = data.angle + Math.PI;
+          if (data.shoot) triggerShoot(p2, false);
+          if (data.dash) triggerDash(p2);
+        }
+      });
+    }
+
+    // =========================================================================
+    // 12. MAIN GAME LOOP (60 FPS Animation & 3D Camera Controller)
+    // =========================================================================
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      const rawDt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      const dt = rawDt * gameState.slowMoFactor;
+
+      // Ambient 3D Arena Animations
+      orbitalRing1.rotation.z += rawDt * 0.28;
+      orbitalRing2.rotation.z -= rawDt * 0.22;
+      starField.rotation.y += rawDt * 0.03;
+
+      if (chronoCoreActive) {
+        chronoCoreGroup.rotation.y += rawDt * 2.2;
+        chronoCoreGroup.position.y = 1.35 + Math.sin(now * 0.004) * 0.28;
+      }
+
+      if (clickTargetMesh.material.opacity > 0) {
+        clickTargetMesh.material.opacity = Math.max(0, clickTargetMesh.material.opacity - rawDt * 1.4);
+      }
+
+      if (gameState.running && !gameState.paused) {
+        // 1. Update Time-Loop Countdown
+        gameState.loopTimer -= dt;
+        const timerEl = document.getElementById('hud-loop-timer');
+        if (timerEl) {
+          timerEl.textContent = `${Math.max(0, gameState.loopTimer).toFixed(1)}s`;
+        }
+        if (gameState.loopTimer <= 0) {
+          triggerTimeRewindCycle();
+        }
+
+        // 2. Player 1 Input: Supports WASD + ZQSD + Arrow Keys (in Solo/Online) + Mouse Click Target + On-screen D-Pad!
+        let p1MoveX = 0;
+        let p1MoveZ = 0;
+        const allowArrowsForP1 = gameState.mode !== 'local';
+
+        const upPressed = keys['KeyW'] || keys['KeyZ'] || touchDir.up || (allowArrowsForP1 && keys['ArrowUp']);
+        const downPressed = keys['KeyS'] || touchDir.down || (allowArrowsForP1 && keys['ArrowDown']);
+        const leftPressed = keys['KeyA'] || keys['KeyQ'] || touchDir.left || (allowArrowsForP1 && keys['ArrowLeft']);
+        const rightPressed = keys['KeyD'] || touchDir.right || (allowArrowsForP1 && keys['ArrowRight']);
+
+        if (upPressed) p1MoveZ -= 1;
+        if (downPressed) p1MoveZ += 1;
+        if (leftPressed) p1MoveX -= 1;
+        if (rightPressed) p1MoveX += 1;
+
+        // Visual feedback on D-Pad buttons when keys are pressed
+        document.getElementById('dpad-up').style.borderColor = upPressed ? '#22d3ee' : '';
+        document.getElementById('dpad-down').style.borderColor = downPressed ? '#22d3ee' : '';
+        document.getElementById('dpad-left').style.borderColor = leftPressed ? '#22d3ee' : '';
+        document.getElementById('dpad-right').style.borderColor = rightPressed ? '#22d3ee' : '';
+
+        // If no keyboard pressed, check if player clicked a point on the 3D Arena
+        if (p1MoveX === 0 && p1MoveZ === 0 && p1.targetX !== null && p1.targetZ !== null) {
+          const dx = p1.targetX - p1.x;
+          const dz = p1.targetZ - p1.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 0.6) {
+            p1MoveX = dx / dist;
+            p1MoveZ = dz / dist;
+          } else {
+            p1.targetX = null;
+            p1.targetZ = null;
+          }
+        }
+
+        const p1Mag = Math.hypot(p1MoveX, p1MoveZ);
+        if (p1Mag > 0.01 && p1.dashActiveTimer <= 0.25) {
+          const speed = 11.2;
+          p1.vx = (p1MoveX / p1Mag) * speed;
+          p1.vz = (p1MoveZ / p1Mag) * speed;
+        }
+
+        // Always aim P1 directly at P2 so shots hit reliably!
+        p1.angle = Math.atan2(p2.z - p1.z, p2.x - p1.x);
+
+        let p1Shot = false;
+        if (keys['Space'] || gameState.autoFire) {
+          p1Shot = triggerShoot(p1, false);
+        }
+        if (keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyE']) {
+          triggerDash(p1);
+        }
+
+        // 3. Player 2 Input (Local 2P or Bot AI or Online Sync)
+        let p2Shot = false;
+        if (gameState.mode === 'local') {
+          let p2MoveX = 0;
+          let p2MoveZ = 0;
+          if (keys['ArrowUp']) p2MoveZ -= 1;
+          if (keys['ArrowDown']) p2MoveZ += 1;
+          if (keys['ArrowLeft']) p2MoveX -= 1;
+          if (keys['ArrowRight']) p2MoveX += 1;
+
+          const p2Mag = Math.hypot(p2MoveX, p2MoveZ);
+          if (p2Mag > 0.01 && p2.dashActiveTimer <= 0.25) {
+            const speed = 11.2;
+            p2.vx = (p2MoveX / p2Mag) * speed;
+            p2.vz = (p2MoveZ / p2Mag) * speed;
+          }
+          p2.angle = Math.atan2(p1.z - p2.z, p1.x - p2.x);
+
+          if (keys['Enter'] || keys['KeyM'] || gameState.autoFire) {
+            p2Shot = triggerShoot(p2, false);
+          }
+          if (keys['ControlRight'] || keys['KeyL']) {
+            triggerDash(p2);
+          }
+        } else if (gameState.mode === 'bot' || !activeConn) {
+          const prevCooldown = p2.shootCooldown;
+          updateBotAI(dt);
+          p2Shot = prevCooldown <= 0 && p2.shootCooldown > 0;
+        }
+
+        // Broadcast P1 state if connected via P2P WebRTC
+        if (gameState.mode === 'online' && activeConn && activeConn.open) {
+          activeConn.send({
+            type: 'state',
+            x: p1.x,
+            z: p1.z,
+            angle: p1.angle,
+            shoot: p1Shot,
+            dash: p1.dashActiveTimer > 0.45
+          });
+        }
+
+        // 4. Update Both Main Fighters
+        updateFighter(p1, dt, p1Shot);
+        updateFighter(p2, dt, p2Shot);
+
+        // 5. Update All Holographic Time-Echo Clones
+        for (const clone of activeEchoClones) {
+          if (clone.recording.length === 0) continue;
+          const frame = clone.recording[clone.frameIndex];
+          if (frame) {
+            clone.mesh.position.set(frame.x, 0, frame.z);
+            clone.mesh.rotation.y = -frame.angle + Math.PI / 2;
+            if (frame.shoot) {
+              fireProjectile(clone.team, frame.x, frame.z, frame.angle, clone.color, true);
+              soundFX.playLaser(true);
+            }
+          }
+          clone.frameIndex = (clone.frameIndex + 1) % clone.recording.length;
+        }
+
+        // 6. Central Chrono Core Power-up Pickup
+        if (chronoCoreActive) {
+          [p1, p2].forEach((fighter) => {
+            if (Math.hypot(fighter.x, fighter.z) < 2.1) {
+              chronoCoreActive = false;
+              chronoCoreGroup.visible = false;
+              chronoCoreRespawnTimer = 11.0;
+              fighter.tripleShotTimer = 6.5;
+              fighter.hp = Math.min(100, fighter.hp + 30);
+              spawnShockwave(0, 0, 0xfbbf24, 6.0);
+              soundFX.playDash();
+              showBanner(
+                fighter.team === 1
+                  ? '💎 TU AS CAPTURÉ LE DIAMANT : TRIPLE TIR + SOIN ACTIVÉ !'
+                  : '⚠️ L\'ENNEMI A PRIS LE DIAMANT CENTRAL !',
+                '💎'
+              );
+              updateHUD();
+            }
+          });
+        } else {
+          chronoCoreRespawnTimer -= dt;
+          if (chronoCoreRespawnTimer <= 0) {
+            chronoCoreActive = true;
+            chronoCoreGroup.visible = true;
+            spawnShockwave(0, 0, 0xfbbf24, 4.0);
+          }
+        }
+
+        // 7. Update Projectiles & Bounces
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+          const pr = projectiles[i];
+          pr.x += pr.vx * dt;
+          pr.z += pr.vz * dt;
+          pr.life -= dt;
+          pr.mesh.position.set(pr.x, 0.9, pr.z);
+
+          let removeProj = pr.life <= 0;
+
+          for (const obs of obstacles) {
+            const dx = pr.x - obs.x;
+            const dz = pr.z - obs.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist < obs.radius + 0.35) {
+              if (pr.bouncesLeft > 0) {
+                pr.bouncesLeft -= 1;
+                const nx = dx / (dist || 1);
+                const nz = dz / (dist || 1);
+                const dot = pr.vx * nx + pr.vz * nz;
+                pr.vx -= 2 * dot * nx;
+                pr.vz -= 2 * dot * nz;
+                pr.mesh.rotation.y = -Math.atan2(pr.vz, pr.vx);
+                spawnExplosion(pr.x, 0.9, pr.z, pr.color, 5);
+              } else {
+                removeProj = true;
+              }
+              break;
+            }
+          }
+
+          const r = Math.hypot(pr.x, pr.z);
+          if (r > ARENA_RADIUS - 0.4) {
+            if (pr.bouncesLeft > 0) {
+              pr.bouncesLeft -= 1;
+              const nx = -pr.x / r;
+              const nz = -pr.z / r;
+              const dot = pr.vx * nx + pr.vz * nz;
+              pr.vx -= 2 * dot * nx;
+              pr.vz -= 2 * dot * nz;
+              pr.mesh.rotation.y = -Math.atan2(pr.vz, pr.vx);
+              spawnExplosion(pr.x, 0.9, pr.z, pr.color, 6);
+            } else {
+              removeProj = true;
+            }
+          }
+
+          // Check Hit against P1 or P2
+          const target = pr.team === 1 ? p2 : p1;
+          if (!removeProj && Math.hypot(pr.x - target.x, pr.z - target.z) < 1.35) {
+            removeProj = true;
+            if (target.dashActiveTimer > 0) {
+              spawnShockwave(target.x, target.z, 0xfacc15, 2.8);
+              soundFX.playDash();
+            } else {
+              // Give P1 slightly stronger shots on Easy mode for instant gratification
+              const dmg = pr.team === 1
+                ? (pr.isEcho ? 14 : 18)
+                : (gameState.botDifficulty === 'easy' ? 8 : 15);
+              target.hp = Math.max(0, target.hp - dmg);
+              if (pr.team === 1) gameState.totalPlayerHits += 1;
+              soundFX.playHit();
+              gameState.shakeIntensity = 0.3;
+              spawnExplosion(target.x, 1.0, target.z, target.color, 16);
+              updateHUD();
+
+              if (target.hp <= 0) {
+                handleRoundWin(pr.team);
+              }
+            }
+          }
+
+          if (removeProj) {
+            scene.remove(pr.mesh);
+            projectiles.splice(i, 1);
+          }
+        }
+      }
+
+      // 8. Update Shockwaves & Particles
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.scale += rawDt * 14;
+        sw.opacity -= rawDt * 1.8;
+        sw.mesh.scale.set(sw.scale, sw.scale, 1);
+        sw.mat.opacity = Math.max(0, sw.opacity);
+        if (sw.opacity <= 0) {
+          scene.remove(sw.mesh);
+          shockwaves.splice(i, 1);
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.life -= rawDt;
+        pt.mesh.position.x += pt.vx * rawDt;
+        pt.mesh.position.y += pt.vy * rawDt;
+        pt.mesh.position.z += pt.vz * rawDt;
+        pt.vy -= 14 * rawDt;
+        pt.mat.opacity = Math.max(0, pt.life * 2);
+        if (pt.life <= 0) {
+          scene.remove(pt.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      // 9. Dynamic 3D Camera Positioning + Screen Shake
+      let camTargetX = (p1.x + p2.x) * 0.22;
+      let camTargetZ = (p1.z + p2.z) * 0.22;
+
+      if (!gameState.running) {
+        const menuAngle = now * 0.00035;
+        camera.position.set(Math.cos(menuAngle) * 29, 21, Math.sin(menuAngle) * 29);
+        camera.lookAt(0, 1, 0);
+      } else {
+        if (gameState.cameraMode === 0) {
+          camera.position.lerp(new THREE.Vector3(camTargetX, 25, 23 + camTargetZ * 0.35), 0.08);
+        } else if (gameState.cameraMode === 1) {
+          camera.position.lerp(new THREE.Vector3(0, 36, 4), 0.08);
+        } else {
+          camera.position.lerp(new THREE.Vector3(camTargetX * 1.3, 15, 28), 0.08);
+        }
+
+        if (gameState.shakeIntensity > 0.01) {
+          camera.position.x += (Math.random() - 0.5) * gameState.shakeIntensity * 2.0;
+          camera.position.y += (Math.random() - 0.5) * gameState.shakeIntensity * 2.0;
+          gameState.shakeIntensity *= 0.88;
+        }
+        camera.lookAt(camTargetX * 0.5, 0.5, camTargetZ * 0.5);
+      }
+
+      cyanPointLight.position.set(p1.x, 4, p1.z);
+      pinkPointLight.position.set(p2.x, 4, p2.z);
+
+      renderer.render(scene, camera);
+
+      // Update 2D Floating Labels Above 3D Ships!
+      updateFloatingMarker('marker-p1', p1.x, 2.7, p1.z);
+      updateFloatingMarker('marker-p2', p2.x, 2.7, p2.z);
+      if (chronoCoreActive) {
+        updateFloatingMarker('marker-core', 0, 3.1, 0);
+      } else {
+        document.getElementById('marker-core').classList.add('hidden');
+      }
+    }
+
+    // =========================================================================
+    // 13. UI EVENT LISTENERS & MENU FLOW
+    // =========================================================================
+    function showToast(msg) {
+      const box = document.getElementById('toast-box');
+      if (!box) return;
+      box.textContent = msg;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 2600);
+    }
+
+    function startMatch(mode, opponentLabel) {
+      soundFX.init();
+      window.focus();
+      gameState.mode = mode;
+      gameState.running = true;
+      gameState.paused = false;
+
+      document.getElementById('hud-p2-name').textContent = opponentLabel;
+      document.getElementById('marker-p2-label').textContent = opponentLabel;
+      document.getElementById('menu-overlay').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.remove('flex');
+      document.getElementById('hud-center-panel').classList.remove('hidden');
+      document.getElementById('hud-center-panel').classList.add('flex');
+      document.getElementById('coach-bar').classList.remove('hidden');
+      document.getElementById('btn-pause-game').classList.remove('hidden');
+      document.getElementById('ingame-controls-footer').classList.remove('hidden');
+      document.getElementById('ingame-controls-footer').classList.add('flex');
+
+      setCoachText('🎯 <span class="text-cyan-300">OBJECTIF :</span> Bouge ton vaisseau <span class="text-cyan-300">BLEU</span> (Flèches, ZQSD, ou <strong>clique sur l\'arène</strong>). Il tire automatiquement sur l\'ennemi <span class="text-rose-400">ROUGE</span> !');
+      resetRoundPositions(false);
+      showBanner('C\'EST PARTI ! DÉPLACE-TOI POUR ESQUIVER ET RAMASSE LE DIAMANT JAUNE !', '🚀');
+    }
+
+    function togglePause() {
+      if (!gameState.running) return;
+      gameState.paused = !gameState.paused;
+      const pauseBtn = document.getElementById('btn-pause-game');
+      if (pauseBtn) {
+        pauseBtn.innerHTML = gameState.paused ? '▶ <span class="hidden sm:inline">Reprendre</span>' : '⏸ <span class="hidden sm:inline">Pause</span>';
+      }
+      showBanner(gameState.paused ? 'JEU EN PAUSE' : 'REPRISE DU DUEL TEMPOREL', '⏸');
+    }
+
+    // Bot Difficulty Selection
+    document.querySelectorAll('.bot-diff-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        gameState.botDifficulty = btn.getAttribute('data-diff');
+        document.querySelectorAll('.bot-diff-btn').forEach((b) => {
+          b.className = 'bot-diff-btn rounded-lg py-1.5 text-xs font-bold border border-slate-700 bg-slate-800/70 text-slate-300';
+        });
+        btn.className = 'bot-diff-btn rounded-lg py-1.5 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200';
+      });
+    });
+
+    // Launch Modes
+    document.getElementById('btn-start-bot').addEventListener('click', () => {
+      const diffLabel = gameState.botDifficulty === 'hard' ? '🔴 BOT PRO' : gameState.botDifficulty === 'medium' ? '🔴 BOT NORMAL' : '🔴 BOT FACILE';
+      startMatch('bot', diffLabel);
+    });
+
+    document.getElementById('btn-start-local').addEventListener('click', () => {
+      startMatch('local', '🔴 JOUEUR 2');
+    });
+
+    document.getElementById('btn-sim-online').addEventListener('click', () => {
+      const globalNames = ['🔴 NEO-TOKYO_99', '🔴 ABIDJAN_PRO', '🔴 PARIS_CYBER', '🔴 SEOUL_GHOST', '🔴 NY_CHRONO'];
+      const picked = globalNames[Math.floor(Math.random() * globalNames.length)];
+      showToast(`Adversaire mondial trouvé : ${picked}`);
+      gameState.botDifficulty = 'medium';
+      startMatch('online', picked);
+    });
+
+    document.getElementById('btn-join-online').addEventListener('click', () => {
+      const codeInput = document.getElementById('input-join-code');
+      const code = (codeInput.value || '').trim().toUpperCase();
+      if (!code) {
+        showToast('Entre un code de salon (ex: ECHO-4821)');
+        return;
+      }
+      const statusMsg = document.getElementById('online-status-msg');
+      if (statusMsg) statusMsg.textContent = `Connexion au salon ${code}...`;
+
+      if (peerInstance) {
+        try {
+          activeConn = peerInstance.connect(code);
+          activeConn.on('open', () => {
+            setupPeerConnection();
+            startMatch('online', '🔴 ' + code);
+          });
+          setTimeout(() => {
+            if (!gameState.running) {
+              showToast(`Salon ${code} rejoint !`);
+              startMatch('online', '🔴 ' + code);
+            }
+          }, 1200);
+        } catch (e) {
+          startMatch('online', '🔴 ' + code);
+        }
+      } else {
+        startMatch('online', '🔴 ' + code);
+      }
+    });
+
+    document.getElementById('btn-copy-code').addEventListener('click', () => {
+      const text = `${myShortCode}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      } else {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+      }
+      showToast(`Code ${myShortCode} copié ! Envoie-le à ton ami.`);
+    });
+
+    // Top Navigation Controls
+    document.getElementById('btn-home-menu').addEventListener('click', () => {
+      gameState.running = false;
+      document.getElementById('menu-overlay').classList.remove('hidden');
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.remove('flex');
+      document.getElementById('hud-center-panel').classList.add('hidden');
+      document.getElementById('coach-bar').classList.add('hidden');
+      document.getElementById('btn-pause-game').classList.add('hidden');
+      document.getElementById('ingame-controls-footer').classList.add('hidden');
+      document.getElementById('marker-p1').classList.add('hidden');
+      document.getElementById('marker-p2').classList.add('hidden');
+      document.getElementById('marker-core').classList.add('hidden');
+    });
+
+    document.getElementById('btn-camera-view').addEventListener('click', () => {
+      gameState.cameraMode = (gameState.cameraMode + 1) % 3;
+      const labels = ['Caméra: Immersive', 'Caméra: Tactique', 'Caméra: Hologramme AR'];
+      document.getElementById('camera-label').textContent = labels[gameState.cameraMode];
+      showToast(labels[gameState.cameraMode]);
+      window.focus();
+    });
+
+    document.getElementById('btn-sound-toggle').addEventListener('click', () => {
+      soundFX.enabled = !soundFX.enabled;
+      document.getElementById('sound-label').textContent = soundFX.enabled ? 'Son ON' : 'Son OFF';
+      showToast(soundFX.enabled ? 'Effets sonores activés' : 'Effets sonores coupés');
+      window.focus();
+    });
+
+    document.getElementById('btn-pause-game').addEventListener('click', togglePause);
+
+    // Rules Help Modal
+    document.getElementById('btn-rules-help').addEventListener('click', () => {
+      if (gameState.running && !gameState.paused) togglePause();
+      const m = document.getElementById('rules-modal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    });
+    document.getElementById('btn-close-rules').addEventListener('click', () => {
+      const m = document.getElementById('rules-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+      if (gameState.running && gameState.paused) togglePause();
+      window.focus();
+    });
+    document.getElementById('btn-ok-rules').addEventListener('click', () => {
+      const m = document.getElementById('rules-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+      if (gameState.running && gameState.paused) togglePause();
+      window.focus();
+    });
+
+    // Gameover Modal Buttons
+    document.getElementById('btn-rematch').addEventListener('click', () => {
+      const oppName = document.getElementById('hud-p2-name').textContent;
+      startMatch(gameState.mode, oppName);
+    });
+
+    document.getElementById('btn-back-lobby').addEventListener('click', () => {
+      document.getElementById('btn-home-menu').click();
+    });
+
+    document.getElementById('btn-share-score').addEventListener('click', () => {
+      const shareTxt = `🔥 Je viens de gagner sur ECHO-PARADOX 3D (${gameState.scores.p1}-${gameState.scores.p2}) avec ${activeEchoClones.length} clones temporels ! Viens me défier (Code: ${myShortCode})`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareTxt).catch(() => {});
+      }
+      showToast('Message de défi copié pour WhatsApp / TikTok / Discord !');
+    });
+
+    // Vercel Guide Modal
+    document.getElementById('btn-vercel-modal').addEventListener('click', () => {
+      const m = document.getElementById('vercel-modal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    });
+    document.getElementById('btn-close-vercel').addEventListener('click', () => {
+      const m = document.getElementById('vercel-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    });
+    document.getElementById('btn-ok-vercel').addEventListener('click', () => {
+      const m = document.getElementById('vercel-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    });
+
+    // Responsive Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Boot on load
+    window.onload = () => {
+      PlayerStats.load();
+      initPeerMultiplayer();
+      requestAnimationFrame(animate);
+    };
+  </script>
+</body>
+</html>

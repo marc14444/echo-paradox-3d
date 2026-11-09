@@ -1,0 +1,9 @@
+{
+  "name": "echo-paradox-3d",
+  "version": "1.0.0",
+  "description": "ECHO-PARADOX 3D - Jeu multijoueur holographique de boucle temporelle (Three.js + WebRTC PeerJS)",
+  "private": true,
+  "scripts": {
+    "start": "npx serve ."
+  }
+}
