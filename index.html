@@ -112,8 +112,12 @@
       </div>
     </div>
 
-    <!-- Right Action Buttons: Sound, Music, Aim Mode, Pause, Vercel Guide -->
+    <!-- Right Action Buttons: Performance, Sound, Music, Aim Mode, Settings, Fullscreen, Pause, Vercel Guide -->
     <div class="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+      <div id="perf-badge" class="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-slate-300 hud-glass rounded-xl px-2.5 py-1">
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="fps-counter">60 FPS</span>
+      </div>
       <div id="gamepad-badge" class="hidden hud-glass rounded-xl px-2 py-1 text-[11px] font-bold text-amber-300 border border-amber-400/50 animate-pulse">
         🎮 Manette
       </div>
@@ -125,6 +129,12 @@
       </button>
       <button id="btn-aim-mode" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-cyan-300 hover:border-cyan-400 transition" title="Basculer entre visée automatique et manuelle (Touche T)">
         🎯 <span id="aim-mode-label" class="hidden sm:inline">Visée: Auto</span>
+      </button>
+      <button id="btn-settings-modal" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-cyan-300 hover:border-cyan-400 transition" title="Paramètres et volumes audio">
+        ⚙️ <span class="hidden md:inline">Options</span>
+      </button>
+      <button id="btn-fullscreen-toggle" class="hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-cyan-300 hover:border-cyan-400 transition" title="Plein écran (Touche F)">
+        ⛶
       </button>
       <button id="btn-pause-game" class="hidden hud-glass rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:border-amber-400 transition">
         ⏸ <span class="hidden sm:inline">Pause</span>
@@ -187,6 +197,31 @@
             <div class="text-[10px] uppercase tracking-wider text-slate-400">Rang Mondial</div>
             <div id="stat-rank" class="font-cyber text-xs font-bold text-emerald-400">BRONZE I</div>
           </div>
+        </div>
+      </div>
+
+      <!-- SKIN & STARFIGHTER CUSTOMIZATION BAR -->
+      <div class="mt-4 rounded-2xl hud-glass border border-cyan-500/30 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-cyber font-bold text-cyan-300">🎨 HANGAR :</span>
+          <span class="text-xs text-slate-300">Choisis ton vaisseau & ta couleur de laser :</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button data-skin="cyan" data-color="0x06b6d4" class="skin-choice-btn active flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold border border-cyan-400 bg-cyan-500/25 text-cyan-200">
+            <span class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span> Cyan Cyber
+          </button>
+          <button data-skin="purple" data-color="0xa855f7" class="skin-choice-btn flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold border border-slate-700 bg-slate-800/80 text-purple-300 hover:border-purple-400">
+            <span class="h-2.5 w-2.5 rounded-full bg-purple-400"></span> Synthwave
+          </button>
+          <button data-skin="green" data-color="0x10b981" class="skin-choice-btn flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold border border-slate-700 bg-slate-800/80 text-emerald-300 hover:border-emerald-400">
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span> Matrix
+          </button>
+          <button data-skin="gold" data-color="0xf59e0b" class="skin-choice-btn flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold border border-slate-700 bg-slate-800/80 text-amber-300 hover:border-amber-400">
+            <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span> Solaire
+          </button>
+          <button data-skin="white" data-color="0xe2e8f0" class="skin-choice-btn flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold border border-slate-700 bg-slate-800/80 text-slate-200 hover:border-white">
+            <span class="h-2.5 w-2.5 rounded-full bg-white"></span> Fantôme
+          </button>
         </div>
       </div>
 
@@ -299,6 +334,9 @@
               <button id="btn-copy-direct-link" class="w-full rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 py-1.5 text-xs font-bold text-cyan-300 transition flex items-center justify-center gap-1.5">
                 🔗 Copier le Lien d'Invitation Direct (1 Clic)
               </button>
+              <button id="btn-copy-direct-link" class="w-full rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 py-1.5 text-xs font-bold text-cyan-300 transition flex items-center justify-center gap-1.5">
+                🔗 Copier le Lien d'Invitation Direct (1 Clic)
+              </button>
               <div class="flex gap-1.5">
                 <input id="input-join-code" type="text" placeholder="Code ami (ex: ECHO-4821)" class="w-full rounded-lg bg-slate-900/90 px-2.5 py-1.5 text-xs text-white border border-slate-700 focus:border-amber-400 focus:outline-none uppercase font-mono" />
                 <button id="btn-join-online" class="rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 transition shrink-0">
@@ -370,7 +408,7 @@
       </p>
 
       <!-- Match Breakdown -->
-      <div class="grid grid-cols-3 gap-2 my-5 rounded-2xl bg-slate-900/80 p-3.5 border border-slate-800">
+      <div class="grid grid-cols-3 gap-2 my-4 rounded-2xl bg-slate-900/80 p-3 border border-slate-800">
         <div>
           <div class="text-[10px] uppercase text-slate-400">Score Final</div>
           <div id="gameover-score" class="font-cyber text-lg font-black text-white mt-0.5">2 - 0</div>
@@ -382,6 +420,22 @@
         <div>
           <div class="text-[10px] uppercase text-slate-400">Tirs Touchés</div>
           <div id="gameover-hits" class="font-cyber text-lg font-black text-amber-400 mt-0.5">12</div>
+        </div>
+      </div>
+
+      <!-- Advanced Pro Stats -->
+      <div class="grid grid-cols-3 gap-2 mb-4 rounded-2xl bg-slate-900/60 p-2.5 border border-slate-800/70 text-xs">
+        <div>
+          <div class="text-[10px] text-slate-400">🎯 Précision</div>
+          <div id="stat-precision" class="font-mono font-bold text-cyan-300 mt-0.5">74%</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">💥 Clones Écrasés</div>
+          <div id="stat-dash-kills" class="font-mono font-bold text-amber-300 mt-0.5">2</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">⏱️ Durée Duel</div>
+          <div id="stat-match-time" class="font-mono font-bold text-emerald-300 mt-0.5">38s</div>
         </div>
       </div>
 
@@ -440,6 +494,63 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast-box" class="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-50 hidden rounded-xl bg-slate-900/95 px-4 py-2 text-xs font-semibold text-cyan-300 border border-cyan-400/50 shadow-xl">
     Lien copié dans le presse-papiers !
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="hud-glass w-full max-w-md rounded-3xl p-6 border border-cyan-400/50 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-cyber text-lg font-bold text-cyan-300 flex items-center gap-2">
+          <span>⚙️</span> Paramètres & Options de Jeu
+        </h3>
+        <button id="btn-close-settings" class="rounded-lg bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:text-white">✕</button>
+      </div>
+      <div class="mt-4 space-y-4 text-xs sm:text-sm text-slate-200">
+        <!-- Musique Synthwave Slider -->
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-slate-800">
+          <div class="flex items-center justify-between font-bold text-slate-300 mb-1.5">
+            <span>🎵 Volume Musique Synthwave :</span>
+            <span id="label-vol-music" class="font-mono text-cyan-400">40%</span>
+          </div>
+          <input id="slider-vol-music" type="range" min="0" max="100" value="40" class="w-full cursor-pointer" />
+        </div>
+
+        <!-- Effets Sonores Slider -->
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-slate-800">
+          <div class="flex items-center justify-between font-bold text-slate-300 mb-1.5">
+            <span>🔊 Volume Effets Sonores (SFX) :</span>
+            <span id="label-vol-sfx" class="font-mono text-cyan-400">80%</span>
+          </div>
+          <input id="slider-vol-sfx" type="range" min="0" max="100" value="80" class="w-full cursor-pointer" />
+        </div>
+
+        <!-- Vibrations / Retour Haptique -->
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-slate-800 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-slate-300">📳 Retour Haptique (Vibreur)</div>
+            <div class="text-[11px] text-slate-400">Vibrations tactiles lors des tirs et dégâts</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input id="toggle-haptics" type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+          </label>
+        </div>
+
+        <!-- Clavier Disposition AZERTY / QWERTY -->
+        <div class="rounded-xl bg-slate-900/90 p-3 border border-slate-800 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-slate-300">⌨️ Disposition Clavier</div>
+            <div class="text-[11px] text-slate-400">Support ZQSD (Azerty) et WASD (Qwerty)</div>
+          </div>
+          <span class="rounded bg-cyan-500/20 px-2 py-1 text-xs font-mono text-cyan-300 border border-cyan-400/30">AUTO DÉTECTÉ</span>
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button id="btn-ok-settings" class="neon-btn-cyan rounded-xl px-6 py-2.5 font-cyber text-xs font-bold text-white">
+          Enregistrer & Fermer
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Virtual Joystick for Touch Screens -->

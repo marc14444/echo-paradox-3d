@@ -71,6 +71,18 @@ class CyberAudio {
     }
   }
 
+  setMusicVolume(ratio) {
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(Math.max(0, Math.min(1, ratio)) * 0.45, this.ctx.currentTime);
+    }
+  }
+
+  setSFXVolume(ratio) {
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(Math.max(0, Math.min(1, ratio)) * 0.9, this.ctx.currentTime);
+    }
+  }
+
   toggleBGM() {
     this.musicEnabled = !this.musicEnabled;
     if (this.musicEnabled) {
@@ -335,6 +347,81 @@ class CyberAudio {
 }
 
 const soundFX = new CyberAudio();
+
+// =========================================================================
+// UX: HAPTICS, MATCH STATS & HANGAR SKIN CUSTOMIZATION
+// =========================================================================
+let matchStartTime = performance.now();
+let p1ShotsFired = 0;
+let p1HitsLanded = 0;
+let p1DashKills = 0;
+let hapticsEnabled = true;
+
+function triggerHaptics(pattern) {
+  if (hapticsEnabled && typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate(pattern); } catch (e) {}
+  }
+}
+
+const SKINS = {
+  cyan: { name: 'Cyan Cyber', color: 0x06b6d4, cssColor: '#06b6d4' },
+  purple: { name: 'Synthwave', color: 0xa855f7, cssColor: '#a855f7' },
+  green: { name: 'Matrix', color: 0x10b981, cssColor: '#10b981' },
+  gold: { name: 'Solaire', color: 0xf59e0b, cssColor: '#f59e0b' },
+  white: { name: 'Fantôme', color: 0xe2e8f0, cssColor: '#e2e8f0' }
+};
+
+let currentSkinId = 'cyan';
+
+function applyPlayerSkin(skinId) {
+  if (!SKINS[skinId]) skinId = 'cyan';
+  currentSkinId = skinId;
+  const skin = SKINS[skinId];
+  p1.color = skin.color;
+
+  // Update P1 Mesh Materials
+  if (p1.mesh) {
+    p1.mesh.traverse((node) => {
+      if (node.isMesh && node.material) {
+        if (node.material.emissive && node !== p1.mesh.userData.shield) {
+          node.material.emissive.setHex(skin.color);
+        }
+        if (node.material.color && node !== p1.mesh.userData.shield && node.material.color.getHex() !== 0x0f172a && node.material.color.getHex() !== 0x091428) {
+          node.material.color.setHex(skin.color);
+        }
+      }
+    });
+  }
+
+  // Update HUD Marker
+  const markerHp = document.getElementById('marker-p1-hp');
+  if (markerHp) markerHp.style.background = skin.cssColor;
+  const hudHp = document.getElementById('hud-p1-hp');
+  if (hudHp) hudHp.style.background = `linear-gradient(to right, ${skin.cssColor}, #2563eb)`;
+
+  // Update UI Buttons
+  document.querySelectorAll('.skin-choice-btn').forEach((btn) => {
+    if (btn.getAttribute('data-skin') === skinId) {
+      btn.classList.add('active');
+      btn.style.borderColor = '#ffffff';
+    } else {
+      btn.classList.remove('active');
+      btn.style.borderColor = '';
+    }
+  });
+
+  try { localStorage.setItem('echo_paradox_skin_v2', skinId); } catch (e) {}
+}
+
+document.querySelectorAll('.skin-choice-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const sId = btn.getAttribute('data-skin');
+    applyPlayerSkin(sId);
+    soundFX.playPowerup();
+    showToast();
+  });
+});
+
 
 // =========================================================================
 // 2. PERSISTENT PLAYER STATS (Safe localStorage wrapper)
@@ -759,6 +846,17 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyT') {
     toggleAimMode();
   }
+  // Shortcut 'F' for Fullscreen
+  if (e.code === 'KeyF') {
+    toggleFullscreen();
+  }
+  // Quick rematch hotkey when gameover modal is open
+  if ((e.code === 'Space' || e.code === 'Enter') && !gameState.running) {
+    const gModal = document.getElementById('gameover-modal');
+    if (gModal && !gModal.classList.contains('hidden')) {
+      document.getElementById('btn-rematch').click();
+    }
+  }
 });
 
 window.addEventListener('keyup', (e) => {
@@ -1051,6 +1149,11 @@ function triggerShoot(fighter, isEcho = false) {
   fighter.shootCooldown = fighter.tripleShotTimer > 0 ? 0.26 : 0.36;
   soundFX.playLaser(isEcho);
 
+  if (fighter.team === 1 && !isEcho) {
+    p1ShotsFired++;
+    triggerHaptics(18);
+  }
+
   if (fighter.tripleShotTimer > 0) {
     [-0.2, 0, 0.2].forEach((offset) => {
       fireProjectile(fighter.team, fighter.x, fighter.z, fighter.angle + offset, 0xfbbf24, isEcho);
@@ -1071,6 +1174,7 @@ function triggerDash(fighter) {
   const dashSpeed = 20;
   fighter.vx = Math.cos(fighter.angle) * dashSpeed;
   fighter.vz = Math.sin(fighter.angle) * dashSpeed;
+  if (fighter.team === 1) triggerHaptics(35);
   return true;
 }
 
@@ -1314,6 +1418,8 @@ function updateFighter(fighter, dt, didShootThisFrame) {
           spawnDamageNumber(clone.mesh.position.x, 1.8, clone.mesh.position.z, '💥 PARADOX SHATTER!', '#facc15', true);
           showBanner('💥 COLLISION DE PARADOXE : CLONE ENNEMI DÉTRUIT EN DASH !', '💥');
           if (fighter.team === 1) {
+            p1DashKills++;
+            triggerHaptics([60, 40, 80]);
             PlayerStats.clonesDestroyed = (PlayerStats.clonesDestroyed || 0) + 1;
             PlayerStats.save();
           }
@@ -1472,6 +1578,16 @@ function endMatch(winnerTeam) {
   clonesEl.textContent = String(activeEchoClones.length);
   hitsEl.textContent = String(gameState.totalPlayerHits);
 
+  // Advanced Pro Stats
+  const durationSec = Math.max(1, Math.round((performance.now() - matchStartTime) / 1000));
+  const accuracy = p1ShotsFired > 0 ? Math.round((p1HitsLanded / p1ShotsFired) * 100) : 0;
+  const precEl = document.getElementById('stat-precision');
+  const dashEl = document.getElementById('stat-dash-kills');
+  const timeEl = document.getElementById('stat-match-time');
+  if (precEl) precEl.textContent = `${accuracy}% (${p1HitsLanded}/${p1ShotsFired})`;
+  if (dashEl) dashEl.textContent = `${p1DashKills} détruit${p1DashKills > 1 ? 's' : ''}`;
+  if (timeEl) timeEl.textContent = `${durationSec}s`;
+
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 }
@@ -1536,8 +1652,18 @@ function checkUrlJoinParams() {
 // 12. MAIN GAME LOOP (60 FPS Animation & 3D Camera Controller)
 // =========================================================================
 let lastTime = performance.now();
+let frameCount = 0;
+let lastFpsTime = performance.now();
 
 function animate(now) {
+  frameCount++;
+  if (now - lastFpsTime >= 500) {
+    const currentFps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+    frameCount = 0;
+    lastFpsTime = now;
+    const fpsEl = document.getElementById('fps-counter');
+    if (fpsEl) fpsEl.textContent = `${currentFps} FPS`;
+  }
   requestAnimationFrame(animate);
 
   const rawDt = Math.min((now - lastTime) / 1000, 0.05);
@@ -2035,6 +2161,11 @@ function startMatch(mode, opponentLabel) {
   document.getElementById('ingame-controls-footer').classList.remove('hidden');
   document.getElementById('ingame-controls-footer').classList.add('flex');
 
+  matchStartTime = performance.now();
+  p1ShotsFired = 0;
+  p1HitsLanded = 0;
+  p1DashKills = 0;
+
   setCoachText('🎯 <span class="text-cyan-300">OBJECTIF :</span> Déplace ton vaisseau <span class="text-cyan-300">BLEU</span> (Flèches, ZQSD, Souris ou Joystick). Détruis les clones ennemis ou dashe à travers !');
   resetRoundPositions(false);
   showBanner('C\'EST PARTI ! DÉPLACE-TOI POUR ESQUIVER ET DÉTRUIS LES CLONES ROUGES !', '🚀');
@@ -2234,10 +2365,107 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+
+// =========================================================================
+// 14. FULLSCREEN & SETTINGS MODAL LOGIC
+// =========================================================================
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+    showToast('Plein écran activé (Touche F pour quitter)');
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+      showToast('Mode fenêtré');
+    }
+  }
+}
+
+const btnFs = document.getElementById('btn-fullscreen-toggle');
+if (btnFs) btnFs.addEventListener('click', toggleFullscreen);
+
+const settingsModal = document.getElementById('settings-modal');
+const btnOpenSettings = document.getElementById('btn-settings-modal');
+const btnCloseSettings = document.getElementById('btn-close-settings');
+const btnOkSettings = document.getElementById('btn-ok-settings');
+const sliderMusic = document.getElementById('slider-vol-music');
+const sliderSfx = document.getElementById('slider-vol-sfx');
+const toggleHapticsEl = document.getElementById('toggle-haptics');
+
+if (btnOpenSettings && settingsModal) {
+  btnOpenSettings.addEventListener('click', () => {
+    if (gameState.running && !gameState.paused) togglePause();
+    settingsModal.classList.remove('hidden');
+    settingsModal.classList.add('flex');
+  });
+}
+
+function closeSettings() {
+  if (settingsModal) {
+    settingsModal.classList.add('hidden');
+    settingsModal.classList.remove('flex');
+  }
+  if (gameState.running && gameState.paused) togglePause();
+}
+
+if (btnCloseSettings) btnCloseSettings.addEventListener('click', closeSettings);
+if (btnOkSettings) btnOkSettings.addEventListener('click', closeSettings);
+
+if (sliderMusic) {
+  sliderMusic.addEventListener('input', (e) => {
+    const val = Number(e.target.value);
+    document.getElementById('label-vol-music').textContent = `${val}%`;
+    soundFX.setMusicVolume(val / 100);
+    try { localStorage.setItem('echo_music_vol', String(val)); } catch (err) {}
+  });
+}
+
+if (sliderSfx) {
+  sliderSfx.addEventListener('input', (e) => {
+    const val = Number(e.target.value);
+    document.getElementById('label-vol-sfx').textContent = `${val}%`;
+    soundFX.setSFXVolume(val / 100);
+    try { localStorage.setItem('echo_sfx_vol', String(val)); } catch (err) {}
+  });
+}
+
+if (toggleHapticsEl) {
+  toggleHapticsEl.addEventListener('change', (e) => {
+    hapticsEnabled = e.target.checked;
+    try { localStorage.setItem('echo_haptics', hapticsEnabled ? '1' : '0'); } catch (err) {}
+  });
+}
+
 // Boot on load
 window.onload = () => {
   PlayerStats.load();
   initPeerMultiplayer();
   initVirtualJoystick();
+
+  // Load saved skin
+  try {
+    const savedSkin = localStorage.getItem('echo_paradox_skin_v2') || 'cyan';
+    applyPlayerSkin(savedSkin);
+  } catch (e) {}
+
+  // Load saved volume preferences
+  try {
+    const savedMusic = localStorage.getItem('echo_music_vol');
+    if (savedMusic !== null && sliderMusic) {
+      sliderMusic.value = savedMusic;
+      sliderMusic.dispatchEvent(new Event('input'));
+    }
+    const savedSfx = localStorage.getItem('echo_sfx_vol');
+    if (savedSfx !== null && sliderSfx) {
+      sliderSfx.value = savedSfx;
+      sliderSfx.dispatchEvent(new Event('input'));
+    }
+    const savedHap = localStorage.getItem('echo_haptics');
+    if (savedHap !== null && toggleHapticsEl) {
+      toggleHapticsEl.checked = savedHap === '1';
+      hapticsEnabled = savedHap === '1';
+    }
+  } catch (e) {}
+
   requestAnimationFrame(animate);
 };

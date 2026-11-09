@@ -158,6 +158,33 @@ body, html {
   transition: transform 0.04s ease-out;
 }
 
+/* Sliders Styling in Settings */
+input[type="range"] {
+  accent-color: #22d3ee;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 8px;
+  height: 6px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #38bdf8;
+  cursor: pointer;
+  box-shadow: 0 0 8px #38bdf8;
+}
+
+/* Skin Choice Buttons */
+.skin-choice-btn {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.skin-choice-btn.active {
+  transform: translateY(-2px) scale(1.05);
+  border-color: #ffffff !important;
+  box-shadow: 0 0 14px currentColor;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
